@@ -20,6 +20,7 @@ import "./Interfaces/Aave/ILendingPool.sol";
 
 import "./BaseStrategy.sol";
 
+
 contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashLoanReceiverBase {
     using SafeERC20 for IERC20;
     using Address for address;
@@ -51,6 +52,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     uint256 public constant withdrawalMax = 10000;
 
     uint256 public collateralTarget = 0.735 ether;  // 73.5% 
+    uint256 public blocksToLiquidationDangerZone = 6650;  // 24 hours =  60*60*24/13
     uint256 public minDAI = 100 ether;
     uint256 public minCompToSell = 0.5 ether;
     bool public active = true;
@@ -592,8 +594,15 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * NOTE: if `tend()` is never intended to be called, it should always return `false`
      */
     function tendTrigger(uint256 gasCost) public override view returns (bool) {
+        if(harvestTrigger(0)){
+            //harvest takes priority
+            return false;
+        }
 
-        return false;
+        if(getblocksUntilLiquidation() <= blocksToLiquidationDangerZone){
+                return true;
+        }
+        
     }
 
     /*
@@ -607,18 +616,41 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
 
-     //note we want this to 
+     //If more than min 
      //to do think about gas
     function harvestTrigger(uint256 gasCost) public override view returns (bool) {
-        if(vault.creditAvailable() > 0)
+
+        if(vault.creditAvailable() > minDAI)
         {
             return true;
         }
 
+        if(_predictCompAccrued() > minCompToSell){
+            return true;
+        }
+       
         return false;
         
 
     }
+    function _predictCompAccrued() public view returns (uint){
+        uint distributionPerBlock = compound.compSpeeds(cDAI);
+
+        (uint256 deposits, uint256 borrows) = getCurrentPosition();
+        if(deposits == 0){
+            return 0;
+        }
+        CErc20I cd = CErc20I(cDAI);
+        uint totalBorrow = cd.totalBorrows();
+        uint totalSupply = cd.totalSupply();
+
+        uint blockShare = (deposits.add(borrows)).mul(distributionPerBlock).div((totalBorrow.add(totalSupply)));
+        uint lastReport = vault.strategies(address(this)).lastSync;
+        return (block.number.sub(lastReport)).mul(blockShare);
+
+    }
+
+
 
     function prepareMigration(address _newStrategy) internal override{
 

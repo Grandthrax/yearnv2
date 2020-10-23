@@ -75,5 +75,3 @@ def withdraw(share, strategy,whale, dai, vault):
     balanceAfter = dai.balanceOf(whale)
     moneyOut = balanceAfter-balanceBefore
     print('Money Out:', Wei(moneyOut).to('ether'))
-
-    stateOf(strategy)

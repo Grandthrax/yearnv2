@@ -1,6 +1,6 @@
 from itertools import count
 from brownie import Wei, reverts
-from useful_methods import stateOfStrat, stateOfVault, deposit,wait
+from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw
 import brownie
 
 
@@ -52,6 +52,8 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
         0,
     ]
 
+    print(strategy._predictCompAccrued(), ' comp prediction')
+
     # Nothing was reported yet from the strategy
     assert vault.expectedReturn(strategy) == 0
     stateOfStrat(strategy,dai)
@@ -64,7 +66,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
    
     # Test first with simply 5k as it is the current rate DAI/block
 
-    amount = Wei('5000 ether')
+    amount = Wei('10000 ether')
     deposit(amount,whale, dai, vault )
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
@@ -88,18 +90,25 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     deposit(amount,whale, dai, vault )
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
-
     
+    print(strategy._predictCompAccrued().to('ether'), ' comp prediction')
+
     wait(10, chain)
     
+    print(strategy._predictCompAccrued().to('ether'), ' comp prediction')
 
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
 
-    
+
     harvestCondition = strategy.harvestTrigger(0, {'from': strategist_and_keeper})
     strategy.harvest({'from': strategist_and_keeper})
 
+
+    stateOfStrat(strategy,dai)
+    stateOfVault(vault,strategy)
+
+    withdraw(1, strategy,whale, dai, vault)
 
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
