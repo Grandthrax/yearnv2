@@ -21,10 +21,13 @@ def initialMigrate(strategy,vault, whale, ychad, dai, controller):
     assert(borrows > 0, "Should have borrowed some")
     assert(deposits > 0, "Should have lent some")
 
-def harvest(strategy, user):
+def harvest(strategy, keeper):
     print('\n----bot calls harvest----')
-    strategy.harvest({'from': user})
-    stateOf(strategy)
+    assert strategy.harvestTrigger(0)
+    harvestCondition = strategy.harvestTrigger(0, {'from': keeper})
+
+    if harvestCondition:
+        strategy.harvest({'from': keeper})
 
 def earn(strategy, vault, user):
     print('\n----bot calls earn----')

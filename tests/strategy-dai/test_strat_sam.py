@@ -1,6 +1,6 @@
 from itertools import count
 from brownie import Wei, reverts
-from useful_methods import stateOfStrat, stateOfVault, deposit,wait
+from useful_methods import stateOfStrat, stateOfVault, deposit, wait, harvest
 import brownie
 
 
@@ -72,11 +72,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
 
 
     # Call harvest in Strategy only when harvestTrigger() --> (true)
-    assert strategy.harvestTrigger(0)
-    harvestCondition = strategy.harvestTrigger(0, {'from': strategist_and_keeper})
-
-    if harvestCondition:
-        strategy.harvest({'from': strategist_and_keeper})
+    harvest(strategy, strategist_and_keeper)
 
    # assert( !strategy.harvestTrigger(0, {'from': strategist_and_keeper}))
     stateOfStrat(strategy,dai)
@@ -96,10 +92,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
 
-    
-    harvestCondition = strategy.harvestTrigger(0, {'from': strategist_and_keeper})
-    strategy.harvest({'from': strategist_and_keeper})
-
+    harvest(strategy, strategist_and_keeper)
 
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
