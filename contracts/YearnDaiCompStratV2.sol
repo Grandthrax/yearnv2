@@ -41,6 +41,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     address public constant comp = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
     address public constant cDAI = address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
+    address public constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     address public constant uni = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     // used for comp <> weth <> dai route
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); 
@@ -56,11 +57,17 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     uint256 public minDAI = 100 ether;
     uint256 public minCompToSell = 0.5 ether;
     bool public active = true;
+    uint public lastBalance = 0;
 
     bool public DyDxActive = true;
     bool public AaveActive = true;
 
-    constructor(address _vault) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING){}
+    constructor(address _vault) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING)
+    {
+        //only accept DAI vault
+        require(vault.token() == DAI, "!DAI");
+
+    }
 
     /*
      * Liquidate as many assets as possible to `want`, irregardless of slippage,
@@ -68,23 +75,20 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      */
     function liquidatePosition(uint256 _amount) internal override {
 
-        uint256 _balance = want.balanceOf(address(this));
+        //ignore reserves
+        uint256 _balance = want.balanceOf(address(this)).sub(reserve);
 
         if (_balance < _amount) {
-            _amount = _withdrawSome(_amount.sub(_balance));
-            _amount = _amount.add(_balance);
+            _withdrawSome(_amount.sub(_balance), true);
+            require(want.balanceOf(address(this)).sub(reserve) >= _amount, "Did not withdraw enough");
         }
 
-         if (_amount > reserve) {
-            reserve = 0;
-        } else {
-            reserve = reserve.sub(_amount);
-        }
     }
 
         
     //This function works out what we want to change with our flash loan
-    // Input balance is the amount we are going to deposit/withdraw. and dep is whether is this a deposit or withdrawal        
+    // Input balance is the amount we are going to deposit/withdraw. and dep is whether is this a deposit or withdrawal  
+    //returns our position change      
     function _calculateDesiredPosition(uint256 balance, bool dep) internal view returns (uint256 position, bool deficit) {
         (uint256 deposits, uint256 borrows) = getCurrentPosition();
 
@@ -165,7 +169,41 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         emit Leverage(maxDeleverage, deleveragedAmount, true, address(0));
     }
 
-    function _withdrawSome(uint256 _amount) internal returns (uint256) {
+    //maxDeleverage is how much we want to reduce by
+    function _normalLeverage(uint256 maxLeverage) internal returns (uint256 leveragedAmount){
+        require(active, "Leverage Disabled");
+        CErc20I cd =CErc20I(cDAI);
+         uint lent = cd.balanceOfUnderlying(address(this));
+
+        //we can use storeed because interest was accrued in last line
+         uint borrowed = cd.borrowBalanceStored(address(this));
+         if(borrowed == 0){
+             return 0;
+         }
+
+        (, uint collateralFactorMantissa,) = compound.markets(cDAI);
+        uint theoreticalBorrow = lent.mul(collateralFactorMantissa).div(1e18);
+
+        leveragedAmount = theoreticalBorrow.sub(borrowed);
+
+        if(leveragedAmount >= maxLeverage){
+            leveragedAmount = maxLeverage;
+        }
+
+        cd.borrow(leveragedAmount);
+
+        IERC20 _want = IERC20(want);
+        
+        
+        _want.safeApprove(cDAI, 0);
+        _want.safeApprove(cDAI, leveragedAmount);
+
+        cd.mint(leveragedAmount);
+
+        emit Leverage(maxLeverage, leveragedAmount, false,  address(0));
+    }
+
+    function _withdrawSome(uint256 _amount, bool _useBackup) internal returns (uint256) {
 
         (uint256 position, bool deficit) = _calculateDesiredPosition(_amount, false);
 
@@ -178,7 +216,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             }
             
             // Will decrease number of interactions using aave as backup
-            if(position >0 && AaveActive) {
+            // because of fee we only use in emergency
+            if(position >0 && AaveActive && _useBackup) {
                position = position.sub(doAaveFlashLoan(deficit, position));
             }
 
@@ -187,10 +226,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             //if we are not in deficit we dont need to do flash loan
             while(position >0){
 
-                require(i < 5, "too many iterations. Try smaller withdraw amount");
                 position = position.sub(_normalDeleverage(position));
 
                 i++;
+
+                if(i >= 5){
+                   break;
+               }
 
             }
         }
@@ -285,7 +327,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         _loanLogic(deficit, amount, repayAmount);
     }
 
-
     function doAaveFlashLoan (
         bool deficit,
         uint256 _flashBackUpAmount
@@ -363,7 +404,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      *       Vault based on sudden withdrawals. This value should be higher than the
      *       total debt of the strategy and higher than it's expected value to be "safe".
      */
-    function estimatedTotalAssets() public override view returns (uint256) {}
+    function estimatedTotalAssets() public override view returns (uint256) {
+         (uint deposits, uint borrows) =getCurrentPosition();
+        return want.balanceOf(address(this)).add(deposits).sub(borrows);
+    }
 
     /*
      * Perform any strategy unwinding or other calls necessary to capture
@@ -375,7 +419,62 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * strategy and reduce it's overall position if lower than expected returns
      * are sustained for long periods of time.
      */
-    function prepareReturn() internal override {}
+
+     //basically prepare return gets our DAI profit. But we need to pay off our debt so we reserve some
+     //_harvest function
+    function prepareReturn() internal override {
+        if(CTokenI(cDAI).balanceOf(address(this)) == 0){
+            //no position to harvest
+            return;
+        }
+
+        //claim comp accrued
+        _claimComp();
+
+        uint256 _comp = IERC20(comp).balanceOf(address(this));
+        
+        if (_comp > minCompToSell) {
+
+            //for safety we set approval to 0 and then reset to required amount
+            IERC20(comp).safeApprove(uni, 0);
+            IERC20(comp).safeApprove(uni, _comp);
+
+            address[] memory path = new address[](3);
+            path[0] = comp;
+            path[1] = weth;
+            path[2] = DAI;
+
+            IUniswapV2Router02(uni).swapExactTokensForTokens(_comp, uint256(0), path, address(this), now.add(1800));
+
+        }
+
+
+        //now store in reserve any amount that isn't profit
+        uint netBal = netBalanceLent();
+        uint debt = vault.debtOutstanding();
+
+        if(netBal > debt){
+            reserve = 0;
+        }else{
+            //doesnt matter if reserve is more than balance
+            reserve = debt.sub(netBal);
+        }
+        
+
+    }
+
+     function netBalanceLent() public view returns (uint256) {
+         (uint deposits, uint borrows) =getCurrentPosition();
+        return deposits.sub(borrows);
+    }
+
+    function _claimComp() internal {
+      
+        CTokenI[] memory tokens = new CTokenI[](1);
+        tokens[0] =  CTokenI(cDAI);
+
+        compound.claimComp(address(this), tokens);
+    }
 
     /*
      * Perform any adjustments to the core position(s) of this strategy given
@@ -384,7 +483,58 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * was made is available for reinvestment. Also note that this number could
      * be 0, and you should handle that scenario accordingly.
      */
-    function adjustPosition() internal override {}
+
+     //main deposit function
+    function adjustPosition() internal override {
+        //we are spending all our cash above outstanding
+        reserve = outstanding;
+
+
+        if(emergencyExit){
+            //we have already done all we can
+            return;
+        }
+        
+        
+
+        uint _wantBal = want.balanceOf(address(this));
+        if(outstanding > _wantBal){
+
+            //if we need money withdrawn we
+            _withdrawSome(outstanding.sub(_wantBal), false);
+
+            return;
+        }
+
+        //Want is DAI. 
+        _wantBal = _wantBal.sub(outstanding);
+        uint256 position; 
+        bool deficit;
+        if(active) {
+            
+            (position, deficit) = _calculateDesiredPosition(_wantBal, true);
+        } else {
+            //if strategy is not active we want to deleverage as much as possible in one flash loan
+             (,,position,) = CErc20I(cDAI).getAccountSnapshot(address(this));
+            deficit = true;
+            
+        }
+        
+        //if we below minimun DAI change it is not worth doing        
+        if (position > minDAI && DyDxActive) {
+
+            //if there is huge position to improve we want to do normal leverage
+            if(position > IERC20(DAI).balanceOf(SOLO) && !deficit){
+                position = position -_normalLeverage(position);
+            }
+           
+            //flash loan to position 
+            doDyDxFlashLoan(deficit, position);
+        }
+
+
+
+    }
 
     /*
      * Make as much capital as possible "free" for the Vault to take. Some slippage
@@ -393,7 +543,14 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * while not suffering exorbitant losses. This function is used during emergency exit
      * instead of `prepareReturn()`
      */
-    function exitPosition() internal override {}
+    function exitPosition() internal override {
+
+        CErc20I cd = CErc20I(cDAI);
+        uint lent = cd.balanceOfUnderlying(address(this));
+        uint borrowed = cd.borrowBalanceCurrent(address(this));
+        _withdrawSome(lent.sub(borrowed), true);
+
+    }
 
     /*
      * Provide a signal to the keeper that `tend()` should be called. The keeper will provide
@@ -406,7 +563,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * NOTE: this call and `harvestTrigger` should never return `true` at the same time.
      * NOTE: if `tend()` is never intended to be called, it should always return `false`
      */
-    function tendTrigger(uint256 gasCost) public override view returns (bool) {}
+    function tendTrigger(uint256 gasCost) public override view returns (bool) {
+
+        return false;
+    }
 
     /*
      * Provide a signal to the keeper that `harvest()` should be called. The keeper will provide
@@ -418,9 +578,56 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      *
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
-    function harvestTrigger(uint256 gasCost) public override view returns (bool) {}
+
+     //note we want this to 
+     //to do think about gas
+    function harvestTrigger(uint256 gasCost) public override view returns (bool) {
+        if(vault.creditAvailable() > 0)
+        {
+            return true;
+        }
+
+        if(com)
+        
+
+    }
 
     function prepareMigration(address _newStrategy) internal override{
+
+    }
+
+
+    //calculate how many blocks until we are in liquidation based on current interest rates
+    //WARNING does not include compounding so the more blocks the more innacurate
+     function getblocksUntilLiquidation() public view returns (uint256 blocks){
+         //equation
+         //((deposits*colateralThreshold - borrows) / (borrows*borrowrate - deposits*colateralThreshold*interestrate));
+        
+        (, uint collateralFactorMantissa,) = compound.markets(cDAI);
+        
+        (uint deposits, uint borrows) = getCurrentPosition();
+        CErc20I cd =CErc20I(cDAI);
+        uint borrrowRate = cd.borrowRatePerBlock();
+
+        uint supplyRate = cd.supplyRatePerBlock();
+
+        uint collateralisedDeposit1 = deposits.mul(collateralFactorMantissa);
+        uint collateralisedDeposit = collateralisedDeposit1.div(1e18);
+
+        uint denom1 = borrows.mul(borrrowRate);
+        uint denom2 =  collateralisedDeposit.mul(supplyRate);
+      
+       
+        //we will never be in lquidation
+        if(denom2 >= denom1 ){
+            blocks = uint256(-1);
+        }else{
+            uint numer = collateralisedDeposit.sub(borrows);
+            uint denom = denom1.sub(denom2);
+
+            blocks = numer.mul(1e18).div(denom);
+        }
+
 
     }
    
