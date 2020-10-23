@@ -3,7 +3,7 @@ from brownie import Wei, reverts
 import brownie
 
 
-def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, Vault, YearnDaiCompStratV2):
+def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2):
     gov = accounts[0]
     strategist_and_keeper = accounts[1]
 
@@ -18,7 +18,7 @@ def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, Vault,
     )
 
     assert vault.governance() == ychad
-    assert vault.guardian() == guardian
+    assert vault.guardian() == gov
     assert vault.rewards() == ydai
     assert vault.token() == dai
 
@@ -44,6 +44,9 @@ def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, Vault,
         0,
         0,
     ]
+
+    # Nothing was reported yet from the strategy
+    assert vault.expectedReturn(strategy) == 0
     
     # Provide funds to the Vault from whale
     whale = accounts.at("0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", force=True)
@@ -54,8 +57,9 @@ def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, Vault,
     vault.deposit(amount, {'from': whale})
     print('deposit amount:', amount.to('ether'))
 
-    # Call harvest in Strategy only when harvestTrigger() --> true
-    harvestCondition = strategy.harvestTrigger({'from': strategist_and_keeper})
+    # Call harvest in Strategy only when harvestTrigger() --> (true)
+    assert strategy.harvestTrigger(0)
+    harvestCondition = strategy.harvestTrigger(0, {'from': strategist_and_keeper})
 
     if harvestCondition:
         strategy.harvest({'from': strategist_and_keeper})
