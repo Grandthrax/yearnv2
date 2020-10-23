@@ -4,10 +4,10 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import './Interfaces/Compound/CErc20I.sol';
-import './Interfaces/Compound/ComptrollerI.sol';
+import "./Interfaces/Compound/CErc20I.sol";
+import "./Interfaces/Compound/ComptrollerI.sol";
 
-import './Interfaces/UniswapInterfaces/IUniswapV2Router02.sol';
+import "./Interfaces/UniswapInterfaces/IUniswapV2Router02.sol";
 
 import "./Interfaces/Yearn/IController.sol";
 
@@ -343,9 +343,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * would provide to the Vault the next time `report()` is called
      * (since the last time it was called)
      */
-    function expectedReturn() public override view returns (uint256){
-
-    }
+    function expectedReturn() public override view returns (uint256) {}
 
     /*
      * Provide an accurate estimate for the total amount of assets (principle + return)
@@ -365,9 +363,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      *       Vault based on sudden withdrawals. This value should be higher than the
      *       total debt of the strategy and higher than it's expected value to be "safe".
      */
-    function estimatedTotalAssets() public override view returns (uint256){
-
-    }
+    function estimatedTotalAssets() public override view returns (uint256) {}
 
     /*
      * Perform any strategy unwinding or other calls necessary to capture
@@ -379,9 +375,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * strategy and reduce it's overall position if lower than expected returns
      * are sustained for long periods of time.
      */
-    function prepareReturn() internal override{
-
-    }
+    function prepareReturn() internal override {}
 
     /*
      * Perform any adjustments to the core position(s) of this strategy given
@@ -390,9 +384,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * was made is available for reinvestment. Also note that this number could
      * be 0, and you should handle that scenario accordingly.
      */
-    function adjustPosition() internal override{
-
-    }
+    function adjustPosition() internal override {}
 
     /*
      * Make as much capital as possible "free" for the Vault to take. Some slippage
@@ -401,9 +393,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * while not suffering exorbitant losses. This function is used during emergency exit
      * instead of `prepareReturn()`
      */
-    function exitPosition() internal override{
-
-    }
+    function exitPosition() internal override {}
 
     /*
      * Provide a signal to the keeper that `tend()` should be called. The keeper will provide
@@ -416,12 +406,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * NOTE: this call and `harvestTrigger` should never return `true` at the same time.
      * NOTE: if `tend()` is never intended to be called, it should always return `false`
      */
-    function tendTrigger(uint256 gasCost) public override view returns (bool){
+    function tendTrigger(uint256 gasCost) public override view returns (bool) {}
 
-    }
-
-    
-     /*
+    /*
      * Provide a signal to the keeper that `harvest()` should be called. The keeper will provide
      * the estimated gas cost that they would pay to call `harvest()`, and this function should
      * use that estimate to make a determination if calling it is "worth it" for the keeper.
@@ -431,9 +418,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      *
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
-    function harvestTrigger(uint256 gasCost) public override view returns (bool){
-
-    }
+    function harvestTrigger(uint256 gasCost) public override view returns (bool) {}
 
     function prepareMigration(address _newStrategy) internal override{
 
