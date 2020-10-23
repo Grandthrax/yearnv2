@@ -1,6 +1,6 @@
 from itertools import count
 from brownie import Wei, reverts
-from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw
+from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest
 import brownie
 
 
@@ -11,6 +11,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     print(strategist_and_keeper)
     
     dai = interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+    comp = interface.ERC20('0xc00e94Cb662C3520282E6f5717214004A7f26888')
     
     ydai = interface.ERC20('0x16de59092dae5ccf4a1e6439d611fd0653f0bd01')
     whale = accounts.at("0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", force=True)
@@ -96,15 +97,20 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
 
+    # Claim COMP and check balance in strategy -> for testing _claimComp() needs to be public
+    #strategy._claimComp({'from': strategist_and_keeper})
+    #comp_balance = comp.balanceOf(strategy)
 
-    harvestCondition = strategy.harvestTrigger(0, {'from': strategist_and_keeper})
-    strategy.harvest({'from': strategist_and_keeper})
+    #print(comp_balance.to('ether'), 'comp claimed')
+
+    # Call harvest in Strategy only when harvestTrigger() --> (true)
+    harvest(strategy, strategist_and_keeper)
 
 
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
 
-    withdraw(1, strategy,whale, dai, vault)
+    withdraw(1, strategy, whale, dai, vault)
 
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
