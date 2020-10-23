@@ -5,11 +5,15 @@ import brownie
 
 def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2):
     gov = accounts[0]
+    print(gov)
     strategist_and_keeper = accounts[1]
+    print(strategist_and_keeper)
 
-    ychad = accounts.at(web3.ens.resolve('ychad.eth'), force=True)
+    ychad = accounts[2]
+    print(ychad)
     
     dai = interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+    
     ydai = interface.ERC20('0x16de59092dae5ccf4a1e6439d611fd0653f0bd01')
 
     # Deploy the Vault
@@ -23,23 +27,23 @@ def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, chain,
     assert vault.token() == dai
 
     # Deploy the Strategy
-    strategy = strategist.deploy(YearnCompDaiStrategy, vault)
+    strategy = strategist_and_keeper.deploy(YearnDaiCompStratV2, vault)
 
     # Addresses
-    assert strategy.strategist() == strategist
-    assert strategy.keeper() == strategist
+    assert strategy.strategist() == strategist_and_keeper
+    assert strategy.keeper() == strategist_and_keeper
     assert strategy.want() == vault.token()
     
     # Add strategy to the Vault
     assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0]
 
-    vault.addStrategy(strategy, 200000, 50000, 50, {"from": gov})
+    vault.addStrategy(strategy, Wei('100000 ether'), Wei('50000 ether'), 50, {"from": ychad})
 
     assert vault.strategies(strategy) == [
         50,
         web3.eth.blockNumber,
-        100000,
-        25000,
+        Wei('100000 ether'),
+        Wei('50000 ether'),
         web3.eth.blockNumber,
         0,
         0,
