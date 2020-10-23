@@ -74,11 +74,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
 
 
     # Call harvest in Strategy only when harvestTrigger() --> (true)
-    assert strategy.harvestTrigger(0)
-    harvestCondition = strategy.harvestTrigger(0, {'from': strategist_and_keeper})
-
-    if harvestCondition:
-        strategy.harvest({'from': strategist_and_keeper})
+    harvest(strategy, strategist_and_keeper)
 
    # assert( !strategy.harvestTrigger(0, {'from': strategist_and_keeper}))
     stateOfStrat(strategy,dai)
