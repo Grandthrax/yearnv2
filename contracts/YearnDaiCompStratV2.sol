@@ -381,7 +381,11 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * would provide to the Vault the next time `report()` is called
      * (since the last time it was called)
      */
-    function expectedReturn() public override view returns (uint256) {}
+    function expectedReturn() public override view returns (uint256) {
+
+        return estimatedTotalAssets().sub(vault.strategies(address(this)).totalDebt);
+
+    }
 
     /*
      * Provide an accurate estimate for the total amount of assets (principle + return)
