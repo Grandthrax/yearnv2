@@ -587,7 +587,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             return true;
         }
 
-        if(com)
+        return false;
         
 
     }
