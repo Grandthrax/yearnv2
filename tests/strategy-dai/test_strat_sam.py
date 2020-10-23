@@ -39,7 +39,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0]
 
     _debtLimit = Wei('10000 ether')
-    _rateLimit =  Wei('5000 ether')
+    _rateLimit =  Wei('10000 ether')
 
     vault.addStrategy(strategy, _debtLimit, _rateLimit, 50, {"from": gov})
 
@@ -104,7 +104,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     #print(comp_balance.to('ether'), 'comp claimed')
 
     # Call harvest in Strategy only when harvestTrigger() --> (true)
-    harvest(strategy, strategist_and_keeper)
+    #harvest(strategy, strategist_and_keeper)
 
 
     stateOfStrat(strategy,dai)

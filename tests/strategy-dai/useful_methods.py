@@ -71,10 +71,10 @@ def deposit(amount, user, dai, vault):
     vault.deposit(amount, {'from': user})    
 
 def withdraw(share, strategy,whale, dai, vault):
-    toWithdraw = 1/share
-    print(f'\n----user withdraws {toWithdraw} share----')
+   
+    print(f'\n----user withdraws {share} shares----')
     balanceBefore = dai.balanceOf(whale)
-    vault.withdraw(vault.balanceOf(whale)/toWithdraw, {'from': whale})
+    vault.withdraw(vault.balanceOf(whale)*share, {'from': whale})
     balanceAfter = dai.balanceOf(whale)
     moneyOut = balanceAfter-balanceBefore
     print('Money Out:', Wei(moneyOut).to('ether'))

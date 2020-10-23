@@ -73,14 +73,21 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * up to `_amount`. Any excess should be re-invested here as well.
      */
     function liquidatePosition(uint256 _amount) internal override {
+        
+        if(estimatedTotalAssets() < _amount){
+            //if we cant afford to withdraw we take all we can
+            //withdraw all we can
+            exitPosition();
+        }else{
+          
+            uint256 _balance = want.balanceOf(address(this));
 
-        //ignore reserves
-        uint256 _balance = want.balanceOf(address(this)).sub(reserve);
-
-        if (_balance < _amount) {
-            _withdrawSome(_amount.sub(_balance), true);
-            require(want.balanceOf(address(this)).sub(reserve) >= _amount, "Did not withdraw enough");
+            if (_balance < _amount) {
+                _withdrawSome(_amount.sub(_balance), true);
+            }
         }
+
+        
 
     }
 
@@ -633,6 +640,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         
 
     }
+
+    //this is not 
     function _predictCompAccrued() public view returns (uint){
         uint distributionPerBlock = compound.compSpeeds(cDAI);
 
