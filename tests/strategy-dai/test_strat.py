@@ -18,10 +18,10 @@ def test_vault_deployment_and_strategy_harvest(accounts, interface, web3, chain,
 
     # Deploy the Vault
     vault = gov.deploy(
-        Vault, dai, ychad, ydai, "yearn DAI v2", "yDAI"
+        Vault, dai, gov, ydai, "yearn DAI v2", "yDAI"
     )
 
-    assert vault.governance() == ychad
+    assert vault.governance() == gov
     assert vault.guardian() == gov
     assert vault.rewards() == ydai
     assert vault.token() == dai
