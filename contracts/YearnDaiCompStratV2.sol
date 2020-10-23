@@ -45,9 +45,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     address public constant uni = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     // used for comp <> weth <> dai route
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); 
-
-    uint256 public performanceFee = 450;
-    uint256 public strategistReward = 50;
     uint256 public constant performanceMax = 10000;
 
     uint256 public withdrawalFee = 50;
@@ -450,15 +447,37 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
 
         //now store in reserve any amount that isn't profit
-        uint netBal = netBalanceLent();
-        uint debt = vault.debtOutstanding();
 
-        if(netBal > debt){
-            reserve = 0;
-        }else{
-            //doesnt matter if reserve is more than balance
-            reserve = debt.sub(netBal);
-        }
+        uint balance = estimatedTotalAssets();
+        uint daiBalance = want.balanceOf(address(this));
+
+        StrategyParams memory params= vault.strategies(address(this));
+        uint debt = params.totalDebt;
+
+       
+
+        if(balance > debt){
+             uint profit = balance.sub(debt);
+            //we are in profit
+            //send profit to strategist
+            uint256 _reward = profit.mul(params.performanceFee).div(performanceMax);
+
+            require(_reward > daiBalance, "NOT ENOUGH PROFIT TO PAY STRATEGIST");
+            want.safeTransfer(strategist, _reward);
+
+            if(profit.sub(_reward) >= daiBalance.sub(_reward) ){
+                //all reserve is profit
+                reserve = 0;
+            }else{
+                //some dai is not profit
+
+                reserve = profit.sub(_reward);
+            }
+        } else{
+            //no profit
+            reserve = daiBalance;
+        }  
+
         
 
     }
