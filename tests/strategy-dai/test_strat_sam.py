@@ -1,6 +1,6 @@
 from itertools import count
 from brownie import Wei, reverts
-from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw
+from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest
 import brownie
 
 
