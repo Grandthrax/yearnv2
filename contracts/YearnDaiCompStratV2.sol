@@ -135,6 +135,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     function estimatedTotalAssets() public override view returns (uint256) {
          (uint deposits, uint borrows) =getCurrentPosition();
         return want.balanceOf(address(this)).add(deposits).sub(borrows);
+
+        //We do not include comp predicted price conversion because it is could be manipulated
+        //Maybe we can use the average of last day or something...
     }
 
     /*
@@ -224,7 +227,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     }
 
     // This function makes a prediction on how much comp is accrued
-    // It is not accurate as it uses current balances in Compound to predict into the past
+    // It is not 100% accurate as it uses current balances in Compound to predict into the past
     function _predictCompAccrued() public view returns (uint){
         
         (uint256 deposits, uint256 borrows) = getCurrentPosition();
@@ -233,14 +236,18 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }
 
         //how much comp is being rewarded per block to DAI lenders and borrowers
+        //half for borrows and half for lend
         uint distributionPerBlock = compound.compSpeeds(cDAI);
 
         CErc20I cd = CErc20I(cDAI);
         uint totalBorrow = cd.totalBorrows();
         uint totalSupply = cd.totalSupply();
 
+        uint blockShareSupply = (deposits.mul(distributionPerBlock)).div(totalSupply).div(2);
+        uint blockShareBorrow = (borrows.mul(distributionPerBlock)).div(totalBorrow).div(2);
+
         //how much we expect to earn per block
-        uint blockShare = (deposits.add(borrows)).mul(distributionPerBlock).div((totalBorrow.add(totalSupply)));
+        uint blockShare = blockShareSupply.add(blockShareBorrow);
 
         //last time we ran harvest
         uint lastReport = vault.strategies(address(this)).lastSync;
