@@ -80,7 +80,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         require(msg.sender == governance() || msg.sender == strategist, "not governance or strategist");
         DyDxActive = true;
     }
-
     function disableAave() external {
         require(msg.sender == governance() || msg.sender == strategist, "not governance or strategist");
         AaveActive = false;
@@ -196,7 +195,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     //Calculate how many blocks until we are in liquidation based on current interest rates
     //WARNING does not include compounding so the estimate becomes more innacurate the further ahead we look
-    //equation
+    //equation. Compound doesn't include compounding for most blocks so it is more accurate than you'd think
     //((deposits*colateralThreshold - borrows) / (borrows*borrowrate - deposits*colateralThreshold*interestrate));
     function getblocksUntilLiquidation() public view returns (uint256 blocks){
 
@@ -228,29 +227,35 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     // This function makes a prediction on how much comp is accrued
     // It is not 100% accurate as it uses current balances in Compound to predict into the past
-    function _predictCompAccrued() public view returns (uint){
+    // A completey accurate number requires state changing calls
+    function _predictCompAccrued() internal view returns (uint){
         
         (uint256 deposits, uint256 borrows) = getCurrentPosition();
         if(deposits == 0){
-            return 0; // impossible to have 0 balance and comp accrued
+            return 0; // should be impossible to have 0 balance and positive comp accrued
         }
 
         //how much comp is being rewarded per block to DAI lenders and borrowers
-        //half for borrows and half for lend
-        uint distributionPerBlock = compound.compSpeeds(cDAI);
+        //comp speed is amount to borrow or deposit (so half the total distribution for dai)
+        uint256 distributionPerBlock = compound.compSpeeds(cDAI);
 
         CErc20I cd = CErc20I(cDAI);
-        uint totalBorrow = cd.totalBorrows();
-        uint totalSupply = cd.totalSupply();
+        uint256 totalBorrow = cd.totalBorrows();
 
-        uint blockShareSupply = (deposits.mul(distributionPerBlock)).div(totalSupply).div(2);
-        uint blockShareBorrow = (borrows.mul(distributionPerBlock)).div(totalBorrow).div(2);
+        //total supply needs to be echanged to underlying
+        uint256 totalSupplyCtoken = cd.totalSupply();
+        uint256 totalSupply = totalSupplyCtoken.mul(cd.exchangeRateStored()).div(1e18);
+
+        uint256 blockShareSupply = deposits.mul(distributionPerBlock).div(totalSupply);
+        uint256 blockShareBorrow = borrows.mul(distributionPerBlock).div(totalBorrow);
 
         //how much we expect to earn per block
-        uint blockShare = blockShareSupply.add(blockShareBorrow);
+        uint256 blockShare = blockShareSupply.add(blockShareBorrow);
+      //  uint256 blockShare = (deposits.add(borrows)).mul(distributionPerBlock).div((totalBorrow.add(totalSupply)));
 
         //last time we ran harvest
-        uint lastReport = vault.strategies(address(this)).lastSync;
+       
+        uint256 lastReport = vault.strategies(address(this)).lastSync;
         return (block.number.sub(lastReport)).mul(blockShare);
 
     }
@@ -510,7 +515,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }
     }
 
-     function _claimComp() internal {
+     function _claimComp() public {
       
         CTokenI[] memory tokens = new CTokenI[](1);
         tokens[0] =  CTokenI(cDAI);

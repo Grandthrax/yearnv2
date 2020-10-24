@@ -4,22 +4,12 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, h
 import brownie
 
 
-def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2):
-    gov = accounts[0]
-    print(gov)
+def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDaiCompStratV2, dai, gov):
+
     strategist_and_keeper = accounts[1]
     print(strategist_and_keeper)
-    
-    dai = interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
-    comp = interface.ERC20('0xc00e94Cb662C3520282E6f5717214004A7f26888')
-    
-    ydai = interface.ERC20('0x16de59092dae5ccf4a1e6439d611fd0653f0bd01')
-    whale = accounts.at("0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", force=True)
 
-    # Deploy the Vault
-    vault = gov.deploy(
-        Vault, dai, gov, gov, "Yearn DAI v2", "y2DAI"
-    )
+    
 
     assert vault.governance() == gov
     assert vault.guardian() == gov
@@ -80,6 +70,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
    # assert( !strategy.harvestTrigger(0, {'from': strategist_and_keeper}))
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
+
 
     # now lets see 90k
 
