@@ -66,7 +66,7 @@ def strategy(gov, strategist, dai, vault, YearnDaiCompStratV2):
 @pytest.fixture
 def largerunningstrategy(gov, strategy, dai, vault, whale):
 
-    amount = Wei('500000 ether')
+    amount = Wei('499000 ether')
     dai.approve(vault, amount, {'from': whale})
     vault.deposit(amount, {'from': whale})    
 

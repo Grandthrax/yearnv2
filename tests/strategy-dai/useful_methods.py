@@ -62,9 +62,12 @@ def assertCollateralRatio(strategy):
 def stateOfVault(vault, strategy):
     print('\n----state of vault----')
     strState = vault.strategies(strategy)
-    print(strState)
+    totalDebt = strState[5].to('ether')
+    totalReturns = strState[6].to('ether')
+    print(f'Total Strategy Debt: {totalDebt:.5f}')
+    print(f'Total Strategy Returns: {totalReturns:.5f}')
     balance = vault.totalAssets().to('ether')
-    print(f'Total Assets: {balance:.5f}x')
+    print(f'Total Assets: {balance:.5f}')
 
 def wait(time, chain):
     print(f'\nWaiting {time} blocks')

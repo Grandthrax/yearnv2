@@ -76,5 +76,5 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
 
 
     print(Wei(profit).to('ether'), ' profit')
-    print(vault.strategies(strategy).totalReturns, ' total returns of strat')
+    print(vault.strategies(strategy)[6], ' total returns of strat')
 
