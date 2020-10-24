@@ -142,7 +142,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         
         uint256 _claimableComp = _predictCompAccrued();
 
-        // Use chainlink price feed to retrieve COMP and DAI prices expressed in USD
+        // Use chainlink price feed to retrieve the latest exchange rate COMP/DAI
         uint256 latestExchangeRate = getLatestExchangeRate();
 
         uint256 _claimableDAI = latestExchangeRate.mul(_claimableComp);
@@ -153,6 +153,12 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         //Maybe we can use the average of last day or something...
     }
 
+    /*
+     * Aggragate the value in USD for COMP and DAI onchain from different chainlink nodes
+     * reducing risk of price manipulation within Uniswap market. Chainlink follows a deviation
+     * threshold parameters and health of each node involded
+     * Operation: COMP_PRICE_IN_USD / DAI_PRICE_IN_USD
+     */
     function getLatestExchangeRate() public view returns(uint256) {
       ( , uint256 price_comp, , ,  ) = COMP2USD.latestRoundData();
       ( , uint256 price_dai, , ,  ) = DAI2USD.latestRoundData();
@@ -249,7 +255,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     // This function makes a prediction on how much comp is accrued
     // It is not 100% accurate as it uses current balances in Compound to predict into the past
     // A completey accurate number requires state changing calls
-    function _predictCompAccrued() internal view returns (uint){
+    function _predictCompAccrued() internal view returns (uint) {
         
         (uint256 deposits, uint256 borrows) = getCurrentPosition();
         if(deposits == 0){
@@ -536,7 +542,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }
     }
 
-     function _claimComp() public {
+     function _claimComp() internal {
       
         CTokenI[] memory tokens = new CTokenI[](1);
         tokens[0] =  CTokenI(cDAI);

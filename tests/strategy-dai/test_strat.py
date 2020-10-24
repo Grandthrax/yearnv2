@@ -42,7 +42,6 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     # Test current price for COMP and DAI using Chainlink
     lastExchangeRate = strategy.getLatestExchangeRate()
     print('Current exchange rate (COMP/DAI): ', lastExchangeRate)
-    #print('Current COMP/USD:', comp_price)
 
     # Add strategy to the Vault
     assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0]
