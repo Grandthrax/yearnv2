@@ -22,12 +22,19 @@ def initialMigrate(strategy,vault, whale, ychad, dai, controller):
     assert(deposits > 0, "Should have lent some")
 
 def harvest(strategy, keeper):
-    print('\n----bot calls harvest----')
-    assert strategy.harvestTrigger(0)
     harvestCondition = strategy.harvestTrigger(0, {'from': keeper})
 
     if harvestCondition:
+        print('\n----bot calls harvest----')
         strategy.harvest({'from': keeper})
+
+def tend(strategy, keeper):
+  
+    tendCondition = strategy.tendTrigger(0, {'from': keeper})
+
+    if tendCondition:
+        print('\n----bot calls tend----')
+        strategy.tend({'from': keeper})
 
 def stateOfStrat(strategy, dai):
     print('\n----state of strat----')
@@ -46,6 +53,11 @@ def stateOfStrat(strategy, dai):
     
     assert( collat < strategy.collateralTarget(), "Over collateral target!")
     print('Expected Profit:', strategy.expectedReturn().to('ether'))
+
+def assertCollateralRatio(strategy):
+    deposits, borrows = strategy.getCurrentPosition()
+    collat = borrows / deposits
+    assert( collat < strategy.collateralTarget(), "Over collateral target!")
 
 def stateOfVault(vault, strategy):
     print('\n----state of vault----')
@@ -66,9 +78,9 @@ def deposit(amount, user, dai, vault):
 
 def withdraw(share,whale, dai, vault):
    
-    print(f'\n----user withdraws {share} shares----')
+    print(f'\n----user withdraws 1/{share} shares----')
     balanceBefore = dai.balanceOf(whale)
-    vault.withdraw(vault.balanceOf(whale)*share, {'from': whale})
+    vault.withdraw(vault.balanceOf(whale)/share, {'from': whale})
     balanceAfter = dai.balanceOf(whale)
     moneyOut = balanceAfter-balanceBefore
     print('Money Out:', Wei(moneyOut).to('ether'))

@@ -10,20 +10,27 @@ def comp(interface):
     yield interface.ERC20('0xc00e94Cb662C3520282E6f5717214004A7f26888')
 
 @pytest.fixture
+def cdai(interface):
+    yield interface.CErc20I('0x5d3a536e4d6dbd6114cc1ead35777bab948e3643')
+
+@pytest.fixture
 def gov(accounts):
     yield accounts[0]
 
 @pytest.fixture
-def strategist(accounts):
+def whale(accounts):
+    yield accounts.at("0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", force=True)
+
+@pytest.fixture
+def strategist(accounts, whale, dai):
+    dai.transfer(accounts[1], Wei('10000 ether'), {'from': whale})
     yield accounts[1]
 
 @pytest.fixture
 def rando(accounts):
     yield accounts[9]
 
-@pytest.fixture
-def whale(accounts):
-    yield accounts.at("0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", force=True)
+
 
 @pytest.fixture
 def vault(gov, dai, Vault):
@@ -63,6 +70,12 @@ def largerunningstrategy(gov, strategy, dai, vault, whale):
     dai.approve(vault, amount, {'from': whale})
     vault.deposit(amount, {'from': whale})    
 
+    strategy.harvest({'from': gov})
+    
+    #do it again with a smaller amount to replicate being this full for a while
+    amount = Wei('1000 ether')
+    dai.approve(vault, amount, {'from': whale})
+    vault.deposit(amount, {'from': whale})   
     strategy.harvest({'from': gov})
     
     yield strategy

@@ -141,18 +141,22 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         (uint deposits, uint borrows) = getCurrentPosition();
         
         uint256 _claimableComp = _predictCompAccrued();
+        uint currentComp = IERC20(comp).balanceOf(address(this));
 
-        // Use chainlink price feed to retrieve COMP and DAI prices expressed in USD
+        // Use chainlink price feed to retrieve COMP and DAI prices expressed in USD. then convert
         uint256 latestExchangeRate = getLatestExchangeRate();
 
-        uint256 _claimableDAI = latestExchangeRate.mul(_claimableComp);
+        uint256 estimatedDAI = latestExchangeRate.mul(_claimableComp.add(currentComp));
         
-        return want.balanceOf(address(this)).add(deposits).add(_claimableDAI).sub(borrows);
+        uint256 conservativeDai = estimatedDAI.mul(10).div(9);
+        
+        return want.balanceOf(address(this)).add(deposits).add(conservativeDai).sub(borrows);
 
         //We do not include comp predicted price conversion because it is could be manipulated
         //Maybe we can use the average of last day or something...
     }
 
+    // function to get comp price exchange rate from oracle
     function getLatestExchangeRate() public view returns(uint256) {
       ( , uint256 price_comp, , ,  ) = COMP2USD.latestRoundData();
       ( , uint256 price_dai, , ,  ) = DAI2USD.latestRoundData();
