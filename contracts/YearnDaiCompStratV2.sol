@@ -75,25 +75,31 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     {
         //only accept DAI vault
         require(vault.token() == DAI, "!DAI");
+                    
+        //pre-set approvals
+        IERC20(comp).safeApprove(uniswapRouter, uint256(-1));
+        want.safeApprove(cDAI, uint256(-1));
+        want.safeApprove(SOLO, uint256(-1));
+
     }
 
     /*
     * Control Functions
     */
     function disableDyDx() external {
-        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
         DyDxActive = false;
     }
     function enableDyDx() external {
-        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
         DyDxActive = true;
     }
     function disableAave() external {
-        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
         AaveActive = false;
     }
     function enableAave() external {
-        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
         AaveActive = true;
     }
 
@@ -154,8 +160,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         
         return want.balanceOf(address(this)).add(deposits).add(conservativeDai).sub(borrows);
 
-        //We do not include comp predicted price conversion because it is could be manipulated
-        //Maybe we can use the average of last day or something...
     }
 
     /*
@@ -505,7 +509,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(dep){
             desiredSupply = unwoundDeposit.add(balance);
         }else{
-            require(unwoundDeposit >= balance); //, "withdrawing more than balance"
+            require(unwoundDeposit >= balance); // dev: withdrawing more than balance
             desiredSupply = unwoundDeposit.sub(balance);
         }
 
@@ -560,16 +564,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         
         if (_comp > minCompToSell) {
 
-            //for safety we set approval to 0 and then reset to required amount
-            IERC20(comp).safeApprove(uniswapRouter, 0);
-            IERC20(comp).safeApprove(uniswapRouter, _comp);
 
             address[] memory path = new address[](3);
             path[0] = comp;
             path[1] = weth;
             path[2] = DAI;
 
-            IUniswapV2Router02(uniswapRouter).swapExactTokensForTokens(_comp, uint256(0), path, address(this), now.add(1800));
+            IUniswapV2Router02(uniswapRouter).swapExactTokensForTokens(_comp, uint256(0), path, address(this), now);
 
         }
     }
@@ -600,7 +601,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
        
         (, , uint borrowBalance,) = cd.getAccountSnapshot(address(this));
 
-        require(borrowBalance ==0);// "not ready to migrate. deleverage first");
+        require(borrowBalance ==0);// dev: not ready to migrate. deleverage first
 
         want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
 
@@ -636,7 +637,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         //maxDeleverage is how much we want to reduce by
     function _normalDeleverage(uint256 maxDeleverage, uint lent, uint borrowed, uint collatRatio) internal returns (uint256 deleveragedAmount) {
         
-        CErc20I cd =CErc20I(cDAI);
+         CErc20I cd =CErc20I(cDAI);
+
         uint theoreticalLent = borrowed.mul(1e18).div(collatRatio);
 
         deleveragedAmount = lent.sub(theoreticalLent);
@@ -647,7 +649,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(deleveragedAmount >= maxDeleverage){
             deleveragedAmount = maxDeleverage;
         }
-        _Down(deleveragedAmount, deleveragedAmount);
+
+        cd.redeemUnderlying(deleveragedAmount);
+        
+        cd.repayBorrow(deleveragedAmount);
     }
 
     //maxDeleverage is how much we want to reduce by
@@ -663,28 +668,17 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             leveragedAmount = maxLeverage;
         }
 
-        _Up(leveragedAmount, leveragedAmount);
+        cd.borrow(leveragedAmount);
+        cd.mint(leveragedAmount);
 
     }
 
-    //Three functions covering different leverage situations
-    function _Up(uint borrow, uint mint) internal {
-        CErc20I cd =CErc20I(cDAI);
 
-        cd.borrow(borrow);
-
-        IERC20 _want = IERC20(want);
-        _want.safeApprove(cDAI, 0);
-        _want.safeApprove(cDAI, mint);
-        cd.mint(mint);
-    }
     function _Down(uint redeem, uint repay) internal {
         CErc20I cd =CErc20I(cDAI);
 
         cd.redeemUnderlying(redeem);
         
-        want.safeApprove(cDAI, 0);
-        want.safeApprove(cDAI, repay);
         cd.repayBorrow(repay);
     }
     function _loanLogic(bool deficit, uint256 amount, uint256 repayAmount) internal {
@@ -693,8 +687,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         //if in deficit we repay amount and then withdraw
         if(deficit) {
            
-            want.safeApprove(cDAI, 0);
-            want.safeApprove(cDAI, amount);
 
             cd.repayBorrow(amount);
 
@@ -702,8 +694,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             cd.redeemUnderlying(repayAmount);
         } else {
             uint amIn = want.balanceOf(address(this));
-            want.safeApprove(cDAI, 0);
-            want.safeApprove(cDAI, amIn);
 
             cd.mint(amIn);
            
@@ -743,8 +733,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }
 
         uint256 repayAmount = _getRepaymentAmountInternal(amount);
-
-        want.safeApprove(SOLO, repayAmount);
 
         bytes memory data = abi.encode(deficit, amount, repayAmount);
 
@@ -802,7 +790,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             amount = _flashBackUpAmount;
         }
         
-        require(amount <= _flashBackUpAmount); // "incorrect amount"
+        require(amount <= _flashBackUpAmount); // dev: "incorrect amount"
 
         bytes memory data = abi.encode(deficit, amount);
        

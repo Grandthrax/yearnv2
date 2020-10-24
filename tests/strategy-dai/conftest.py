@@ -18,8 +18,9 @@ def gov(accounts):
     yield accounts[0]
 
 @pytest.fixture
-def whale(accounts):
-    yield accounts.at("0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", force=True)
+def whale(accounts, history, web3):
+    acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
+    yield acc
 
 @pytest.fixture
 def strategist(accounts, whale, dai):
@@ -56,8 +57,8 @@ def strategy(gov, strategist, dai, vault, YearnDaiCompStratV2):
 
     vault.addStrategy(
         strategy,
-        dai.totalSupply() // 5,  # Debt limit of 20% of token supply 
-        dai.totalSupply() // 1000,  # Rate limt of 0.1% of token supply per block
+        dai.totalSupply(),  # Debt limit of 20% of token supply 
+        dai.totalSupply(),  # Rate limt of 0.1% of token supply per block
         50,  # 0.5% performance fee for Strategist
         {"from": gov},
     )

@@ -7,6 +7,7 @@ import brownie
 def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, strategist,cdai):
     #our humble strategist is going to publish both the vault and the strategy
 
+
     # this is to mint small amount of dai reguarly to replicate people interacting with cdai contract
     dai.approve(cdai, 2 ** 256 - 1, {"from": whale})
 
@@ -73,7 +74,6 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
     stateOfVault(vault, strategy)
 
     profit = dai.balanceOf(strategist) - starting_balance
-
 
     print(Wei(profit).to('ether'), ' profit')
     print(vault.strategies(strategy)[6], ' total returns of strat')

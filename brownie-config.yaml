@@ -1,7 +1,7 @@
 # use Ganache's forked mainnet mode as the default network
 networks:
-  default: development
-
+  default: mainnet-fork
+  
 # require OpenZepplin Contracts
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.1.0
