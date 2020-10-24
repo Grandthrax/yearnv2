@@ -42,8 +42,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     address private constant AAVE_LENDING = 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8;
 
     // Chainlink price feed contracts
-    AggregatorV3Interface internal COMP2USD = AggregatorV3Interface(0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5);
-    AggregatorV3Interface internal DAI2USD = AggregatorV3Interface(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9);
+    address private constant COMP2USD = 0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5;
+    address private constant DAI2USD = 0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9;
+    //AggregatorV3Interface internal COMP2USD = AggregatorV3Interface(0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5);
+    //AggregatorV3Interface internal DAI2USD = AggregatorV3Interface(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9);
 
     // Comptroller address for compound.finance
     ComptrollerI public constant compound = ComptrollerI(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B); 
@@ -79,19 +81,19 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     * Control Functions
     */
     function disableDyDx() external {
-        require(msg.sender == governance() || msg.sender == strategist, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
         DyDxActive = false;
     }
     function enableDyDx() external {
-        require(msg.sender == governance() || msg.sender == strategist, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
         DyDxActive = true;
     }
     function disableAave() external {
-        require(msg.sender == governance() || msg.sender == strategist, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
         AaveActive = false;
     }
     function enableAave() external {
-        require(msg.sender == governance() || msg.sender == strategist, "not governance or strategist");
+        require(msg.sender == governance() || msg.sender == strategist);//, "not governance or strategist");
         AaveActive = true;
     }
 
@@ -163,8 +165,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * Operation: COMP_PRICE_IN_USD / DAI_PRICE_IN_USD
      */
     function getLatestExchangeRate() public view returns(uint256) {
-      ( , uint256 price_comp, , ,  ) = COMP2USD.latestRoundData();
-      ( , uint256 price_dai, , ,  ) = DAI2USD.latestRoundData();
+      ( , uint256 price_comp, , ,  ) = AggregatorV3Interface(COMP2USD).latestRoundData();
+      ( , uint256 price_dai, , ,  ) = AggregatorV3Interface(DAI2USD).latestRoundData();
       
       return price_comp.div(price_dai);
     }
@@ -503,7 +505,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(dep){
             desiredSupply = unwoundDeposit.add(balance);
         }else{
-            require(unwoundDeposit >= balance, "withdrawing more than balance");
+            require(unwoundDeposit >= balance); //, "withdrawing more than balance"
             desiredSupply = unwoundDeposit.sub(balance);
         }
 
@@ -598,7 +600,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
        
         (, , uint borrowBalance,) = cd.getAccountSnapshot(address(this));
 
-        require(borrowBalance ==0, "not ready to migrate. deleverage first");
+        require(borrowBalance ==0);// "not ready to migrate. deleverage first");
 
         want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
 
@@ -800,7 +802,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             amount = _flashBackUpAmount;
         }
         
-        require(amount <= _flashBackUpAmount, "incorrect amount");
+        require(amount <= _flashBackUpAmount); // "incorrect amount"
 
         bytes memory data = abi.encode(deficit, amount);
        

@@ -17,15 +17,15 @@ def test_profit_is_registered(web3, chain, comp, vault, largerunningstrategy, wh
     stateOfStrat(largerunningstrategy, dai)
     stateOfVault(vault, largerunningstrategy)
 
-    sample = 1000
+    sample = 500
 
-    wait(1000, chain)
+    wait(sample, chain)
     harvest(largerunningstrategy, gov)
     stateOfStrat(largerunningstrategy, dai)
     stateOfVault(vault, largerunningstrategy)
 
-    debt = vault.strategies(strategy)[5]
-    returns = vault.strategies(strategy)[6]
+    debt = vault.strategies(largerunningstrategy)[5]
+    returns = vault.strategies(largerunningstrategy)[6]
     assert returns > 0
 
     blocks_per_year = 2_300_000
@@ -33,27 +33,3 @@ def test_profit_is_registered(web3, chain, comp, vault, largerunningstrategy, wh
     print(f'implied apr: {apr:.8%}')
 
     assert apr > 0
-
-
-def test_withdraw_all(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai, strategist):
-
-    balance_before = dai.balanceOf(strategist)
-    stateOfStrat(largerunningstrategy, dai)
-    stateOfVault(vault, largerunningstrategy)
-
-    
-    amount = Wei('10000 ether')
-    deposit(amount, strategist, dai, vault)
-    harvest(largerunningstrategy, gov)
-
-    wait(1000, chain)
-    harvest(largerunningstrategy, gov)
-    stateOfStrat(largerunningstrategy, dai)
-    stateOfVault(vault, largerunningstrategy)
-
-    withdraw(1,strategist, dai, vault)
-
-    profitW = dai.balanceOf(strategist) - balance_before
-    profit = profitW.to('ether')
-    print(f'profit: {profit:.5%}')
-
