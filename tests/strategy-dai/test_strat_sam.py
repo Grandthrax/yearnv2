@@ -38,8 +38,8 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     # Add strategy to the Vault
     assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0]
 
-    _debtLimit = Wei('10000 ether')
-    _rateLimit =  Wei('10000 ether')
+    _debtLimit = Wei('1000000 ether')
+    _rateLimit =  Wei('1000000 ether')
 
     vault.addStrategy(strategy, _debtLimit, _rateLimit, 50, {"from": gov})
 
@@ -59,7 +59,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     assert vault.expectedReturn(strategy) == 0
     stateOfStrat(strategy,dai)
 
-    depositLimit = Wei('100000 ether')
+    depositLimit = Wei('500000 ether')
     vault.setDepositLimit(depositLimit, {"from": gov})
     assert vault.depositLimit() == depositLimit 
     
@@ -67,7 +67,7 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
    
     # Test first with simply 5k as it is the current rate DAI/block
 
-    amount = Wei('10000 ether')
+    amount = Wei('100000 ether')
     deposit(amount,whale, dai, vault )
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
@@ -83,16 +83,12 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
 
     # now lets see 90k
 
-    amount = Wei('90000 ether')
+    amount = Wei('320000 ether')
     deposit(amount,whale, dai, vault )
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
     
-    print(strategy._predictCompAccrued().to('ether'), ' comp prediction')
-
-    wait(10, chain)
-    
-    print(strategy._predictCompAccrued().to('ether'), ' comp prediction')
+    harvest(strategy, strategist_and_keeper)
 
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
@@ -110,7 +106,52 @@ def test_strat_sam(accounts, interface, web3, chain, Vault, YearnDaiCompStratV2)
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
 
-    withdraw(1, strategy, whale, dai, vault)
+    #withdraw(1, strategy, whale, dai, vault)
+    #vault.setEmergencyShutdown(True, {"from": gov})
+
+    
+    
+    while strategy.harvestTrigger(0) == False:
+         wait(25, chain)
+         print(strategy._predictCompAccrued().to('ether'), ' comp prediction')
+
+    #print('Emergency Exit')
+    #strategy.setEmergencyExit({"from": gov})
 
     stateOfStrat(strategy,dai)
     stateOfVault(vault,strategy)
+
+    harvest(strategy, strategist_and_keeper)
+
+    stateOfStrat(strategy,dai)
+    stateOfVault(vault,strategy)
+
+    ##test migration
+    print('test migration')
+    strategy2 = strategist_and_keeper.deploy(YearnDaiCompStratV2, vault)
+    vault.migrateStrategy(strategy,strategy2,  {"from": gov})
+
+    print('old strat')
+    stateOfStrat(strategy,dai)
+    stateOfVault(vault,strategy)
+
+    print('new strat')
+    stateOfStrat(strategy2,dai)
+    stateOfVault(vault,strategy2)
+
+    withdraw(1, whale, dai, vault)
+    stateOfStrat(strategy2,dai)
+    stateOfVault(vault,strategy2)
+
+    amount = Wei('320000 ether')
+    deposit(amount,whale, dai, vault )
+    stateOfStrat(strategy2,dai)
+    stateOfVault(vault,strategy2)
+
+    harvest(strategy2, strategist_and_keeper)
+    stateOfStrat(strategy2,dai)
+    stateOfVault(vault,strategy2)
+
+    withdraw(1, whale, dai, vault)
+    stateOfStrat(strategy2,dai)
+    stateOfVault(vault,strategy2)

@@ -29,18 +29,12 @@ def harvest(strategy, keeper):
     if harvestCondition:
         strategy.harvest({'from': keeper})
 
-def earn(strategy, vault, user):
-    print('\n----bot calls earn----')
-    vault.earn({'from': user})
-    stateOf(strategy)
-
 def stateOfStrat(strategy, dai):
     print('\n----state of strat----')
     deposits, borrows = strategy.getCurrentPosition()
     print('DAI:',dai.balanceOf(strategy).to('ether'))
     print('borrows:', Wei(borrows).to('ether'))  
     print('deposits:', Wei(deposits).to('ether'))
-    print('borrows:', Wei(borrows).to('ether'))  
     print('total assets:', strategy.estimatedTotalAssets().to('ether'))  
     if deposits == 0:
         collat = 0 
@@ -70,7 +64,7 @@ def deposit(amount, user, dai, vault):
     print('deposit amount:', amount.to('ether'))
     vault.deposit(amount, {'from': user})    
 
-def withdraw(share, strategy,whale, dai, vault):
+def withdraw(share,whale, dai, vault):
    
     print(f'\n----user withdraws {share} shares----')
     balanceBefore = dai.balanceOf(whale)
