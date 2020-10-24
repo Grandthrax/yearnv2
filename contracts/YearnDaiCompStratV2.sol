@@ -18,6 +18,8 @@ import "./Interfaces/Aave/FlashLoanReceiverBase.sol";
 import "./Interfaces/Aave/ILendingPoolAddressesProvider.sol";
 import "./Interfaces/Aave/ILendingPool.sol";
 
+import "./Interfaces/Chainlink/AggregatorV3Interface.sol";
+
 import "./BaseStrategy.sol";
 
 /********************
@@ -38,6 +40,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     //Flash Loan Providers
     address private constant SOLO = 0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e;
     address private constant AAVE_LENDING = 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8;
+
+    // Chainlink price feed contracts
+    AggregatorV3Interface internal COMP2USD = AggregatorV3Interface(0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5);
+    AggregatorV3Interface internal DAI2USD = AggregatorV3Interface(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9);
 
     // Comptroller address for compound.finance
     ComptrollerI public constant compound = ComptrollerI(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B); 
@@ -132,11 +138,26 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      *
      */
     function estimatedTotalAssets() public override view returns (uint256) {
-         (uint deposits, uint borrows) =getCurrentPosition();
-        return want.balanceOf(address(this)).add(deposits).sub(borrows);
+        (uint deposits, uint borrows) = getCurrentPosition();
+        
+        uint256 _claimableComp = _predictCompAccrued();
+
+        // Use chainlink price feed to retrieve COMP and DAI prices expressed in USD
+        uint256 latestExchangeRate = getLatestExchangeRate();
+
+        uint256 _claimableDAI = latestExchangeRate.mul(_claimableComp);
+        
+        return want.balanceOf(address(this)).add(deposits).add(_claimableDAI).sub(borrows);
 
         //We do not include comp predicted price conversion because it is could be manipulated
         //Maybe we can use the average of last day or something...
+    }
+
+    function getLatestExchangeRate() public view returns(uint256) {
+      ( , uint256 price_comp, , ,  ) = COMP2USD.latestRoundData();
+      ( , uint256 price_dai, , ,  ) = DAI2USD.latestRoundData();
+      
+      return price_comp.div(price_dai);
     }
 
     /*
