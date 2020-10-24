@@ -269,7 +269,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         CErc20I cd = CErc20I(cDAI);
         uint256 totalBorrow = cd.totalBorrows();
 
-        //total supply needs to be echanged to underlying
+        //total supply needs to be echanged to underlying usine exchange rate
         uint256 totalSupplyCtoken = cd.totalSupply();
         uint256 totalSupply = totalSupplyCtoken.mul(cd.exchangeRateStored()).div(1e18);
 
@@ -278,8 +278,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         //how much we expect to earn per block
         uint256 blockShare = blockShareSupply.add(blockShareBorrow);
-      //  uint256 blockShare = (deposits.add(borrows)).mul(distributionPerBlock).div((totalBorrow.add(totalSupply)));
-
+      
         //last time we ran harvest
        
         uint256 lastReport = vault.strategies(address(this)).lastSync;
