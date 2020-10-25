@@ -427,7 +427,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         //we are spending all our cash unless we have an outstanding debt (when we wont have any cash)
         uint _wantBal = want.balanceOf(address(this));
         if(outstanding > _wantBal){
-            //withdrawn the money we need
+            //withdrawn the money we need. False so we dont use backup and pay aave fees for mature deleverage
             _withdrawSome(outstanding - _wantBal, false);
 
             return;
@@ -445,7 +445,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
                 _noFlashLoan(position, deficit);
             }else{
                 //if there is huge position to improve we want to do normal leverage. it is quicker
-                if(position > IERC20(DAI).balanceOf(SOLO) && !deficit){
+                if(position > IERC20(DAI).balanceOf(SOLO)){
                     position = position.sub(_noFlashLoan(position, deficit));
                 }
            
@@ -459,11 +459,11 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     * Very important function
     * Input: amount we want to withdraw and whether we are happy to pay extra for Aave. 
     *       cannot be more than we 
-    * Returns amount we were able to withdraw
+    * Returns amount we were able to withdraw. notall if user has some balance left
     *
     * Deleverage position -> redeem our cTokens
     ******************** */
-    function _withdrawSome(uint256 _amount, bool _useBackup) internal returns (uint256) {
+    function _withdrawSome(uint256 _amount, bool _useBackup) internal returns (bool notAll) {
 
         (uint256 position, bool deficit) = _calculateDesiredPosition(_amount, false);
 
@@ -494,7 +494,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
                 //A limit set so we don't run out of gas
                 if(i >= 5){
-                   break;
+                    notAll= false;
+                    break;
                }
             }
         }
@@ -514,10 +515,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         //let's sell some comp if we have more than needed
         //flash loan would have sent us comp if we had some accrued so we don't need to call claim comp
         _disposeOfComp();
-
-        uint256 _after = want.balanceOf(address(this));
-        uint256 _withdrew = _after.sub(_before);
-        return _withdrew;
     }
 
     /***********
@@ -595,7 +592,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             uint256 _balance = want.balanceOf(address(this));
 
             if (_balance < _amount) {
-                _withdrawSome(_amount.sub(_balance), true);
+                require(!_withdrawSome(_amount.sub(_balance), true), "DelevFirst");
             }
         }
     }
@@ -802,9 +799,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }else{
             require(borrowbefore == borrowAfter.sub(repayAmount), "increase wrong");
         }
-        //require our collat ratio is below target
-        
-        require (storedCollateralisation()<= collateralTarget, "Over collateral target?!");
 
         return amount;
      }

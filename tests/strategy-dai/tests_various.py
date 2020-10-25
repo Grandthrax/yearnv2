@@ -26,6 +26,16 @@ def test_getting_too_close_to_liq(web3, chain, comp, vault, largerunningstrategy
     print(largerunningstrategy.getblocksUntilLiquidation())
     print(largerunningstrategy.tendTrigger(0))
     largerunningstrategy.tend({'from': gov})
+    assertCollateralRatio(largerunningstrategy)
+    stateOfStrat(largerunningstrategy, dai, comp)
+    stateOfVault(vault, largerunningstrategy)
+
+    largerunningstrategy.setCollateralTarget(Wei('0.73 ether'), {"from": gov} )
+    print(largerunningstrategy.tendTrigger(0))
+    largerunningstrategy.tend({'from': gov})
+    assertCollateralRatio(largerunningstrategy)
+    stateOfStrat(largerunningstrategy, dai, comp)
+    stateOfVault(vault, largerunningstrategy)
 
 def test_profit_is_registered(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai):
 
