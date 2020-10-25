@@ -378,9 +378,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         uint balance = estimatedTotalAssets();
         uint daiBalance = want.balanceOf(address(this));
-
-        StrategyParams memory params= vault.strategies(address(this));
-        uint debt = params.totalDebt;
+        
+        uint debt = vault.strategies(address(this)).totalDebt;
 
         //Balance - Total Debt is profit
         if(balance > debt){
