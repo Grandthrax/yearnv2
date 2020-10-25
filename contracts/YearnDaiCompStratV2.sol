@@ -180,7 +180,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
       ( , uint256 price_comp, , ,  ) = AggregatorV3Interface(COMP2USD).latestRoundData();
       ( , uint256 price_eth, , ,  ) = AggregatorV3Interface(ETH2USD).latestRoundData();
       
-      return price_comp.div(price_eth).mul(_amount);
+      return price_comp.mul(1 ether).div(price_eth).mul(_amount).div(1 ether);
     }
 
     /*
@@ -228,7 +228,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         if(_claimableComp > minCompToSell) {
             // check value of COMP in wei
-            uint256 _compWei = getCompValInWei(_claimableComp);
+            uint256 _compWei = getCompValInWei(_claimableComp).mul(10); // testing as `gasFactor`
             if(_compWei > gasCost) {
                 return true;
             }

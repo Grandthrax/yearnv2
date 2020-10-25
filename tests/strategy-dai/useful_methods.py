@@ -21,14 +21,14 @@ def initialMigrate(strategy,vault, whale, ychad, dai, controller):
     assert(borrows > 0, "Should have borrowed some")
     assert(deposits > 0, "Should have lent some")
 
-def harvest(strategy, keeper):
+def harvest(strategy, keeper, vault):
     # Evaluate gas cost of calling harvest
     latestEthPrice = 400 # aprox usd price only for testing
     tx = strategy.harvest()
     txGasCost = tx.gas_used * latestEthPrice
     print('Tx harvest() gas cost: ', txGasCost)
+    print('Available credit from vault: ', vault.creditAvailable(strategy))
     harvestCondition = strategy.harvestTrigger(txGasCost, {'from': keeper})
-
     if harvestCondition:
         print('\n----bot calls harvest----')
         strategy.harvest({'from': keeper})
