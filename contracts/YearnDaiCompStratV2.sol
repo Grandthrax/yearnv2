@@ -52,7 +52,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     //Only three tokens we use
     address public constant comp = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
-    address public constant cDAI = address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
+    CErc20I public constant cDAI = CErc20I(address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643));
     address public constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
     // used for comp <> weth <> dai route
@@ -78,7 +78,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
                     
         //pre-set approvals
         IERC20(comp).safeApprove(uniswapRouter, uint256(-1));
-        want.safeApprove(cDAI, uint256(-1));
+        want.safeApprove(address(cDAI), uint256(-1));
         want.safeApprove(SOLO, uint256(-1));
 
     }
@@ -121,7 +121,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(debt > estimateAssets){
             return 0;
         }else{
-            return estimateAssets.sub(debt);
+            return estimateAssets - debt; //dont need safe math 
         }
 
     }
@@ -236,13 +236,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     function getblocksUntilLiquidation() public view returns (uint256 blocks){
 
         
-        (, uint collateralFactorMantissa,) = compound.markets(cDAI);
+        (, uint collateralFactorMantissa,) = compound.markets(address(cDAI));
         
         (uint deposits, uint borrows) = getCurrentPosition();
-        CErc20I cd =CErc20I(cDAI);
-        uint borrrowRate = cd.borrowRatePerBlock();
 
-        uint supplyRate = cd.supplyRatePerBlock();
+        uint borrrowRate = cDAI.borrowRatePerBlock();
+
+        uint supplyRate = cDAI.supplyRatePerBlock();
 
         uint collateralisedDeposit1 = deposits.mul(collateralFactorMantissa);
         uint collateralisedDeposit = collateralisedDeposit1.div(1e18);
@@ -255,7 +255,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             blocks = uint256(-1);
         }else{
             uint numer = collateralisedDeposit.sub(borrows);
-            uint denom = denom1.sub(denom2);
+            uint denom = denom1 - denom2;
 
             blocks = numer.mul(1e18).div(denom);
         }
@@ -273,14 +273,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         //how much comp is being rewarded per block to DAI lenders and borrowers
         //comp speed is amount to borrow or deposit (so half the total distribution for dai)
-        uint256 distributionPerBlock = compound.compSpeeds(cDAI);
+        uint256 distributionPerBlock = compound.compSpeeds(address(cDAI));
 
-        CErc20I cd = CErc20I(cDAI);
-        uint256 totalBorrow = cd.totalBorrows();
+        uint256 totalBorrow = cDAI.totalBorrows();
 
         //total supply needs to be echanged to underlying usine exchange rate
-        uint256 totalSupplyCtoken = cd.totalSupply();
-        uint256 totalSupply = totalSupplyCtoken.mul(cd.exchangeRateStored()).div(1e18);
+        uint256 totalSupplyCtoken = cDAI.totalSupply();
+        uint256 totalSupply = totalSupplyCtoken.mul(cDAI.exchangeRateStored()).div(1e18);
 
         uint256 blockShareSupply = deposits.mul(distributionPerBlock).div(totalSupply);
         uint256 blockShareBorrow = borrows.mul(distributionPerBlock).div(totalBorrow);
@@ -299,12 +298,19 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     //WARNING - this returns just the balance at last time someone touched the cDAI token. Does not accrue interst inbetween
     //cDAI is very active so not normally an issue. Shows up more in testing than production
     function getCurrentPosition() public view returns (uint deposits, uint borrows) {
-        CErc20I cd = CErc20I(cDAI);
-       
-        (, uint ctokenBalance, uint borrowBalance, uint exchangeRate) = cd.getAccountSnapshot(address(this));
+
+        (, uint ctokenBalance, uint borrowBalance, uint exchangeRate) = cDAI.getAccountSnapshot(address(this));
         borrows = borrowBalance;
 
         deposits =  ctokenBalance.mul(exchangeRate).div(1e18);
+    }
+
+    //statechanging version
+    function getLivePosition() public returns (uint deposits, uint borrows) {
+        deposits = cDAI.balanceOfUnderlying(address(this));
+
+        //we can use non state changing borrowBalanceStored because we updated state with balanceOfUnderlying call
+        borrows = cDAI.borrowBalanceStored(address(this));
     }
 
     //Same warning as above
@@ -334,7 +340,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * 3 - because we lose money on our loans we need to offset profit from comp. 
      */ 
     function prepareReturn() internal override {
-        if(CTokenI(cDAI).balanceOf(address(this)) == 0){
+        if(cDAI.balanceOf(address(this)) == 0){
             //no position to harvest
             return;
         }
@@ -352,7 +358,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         //Balance - Total Debt is profit
         if(balance > debt){
-             uint profit = balance.sub(debt);
+             uint profit = balance- debt;
             
             if(profit >= daiBalance ){
                 //all reserve is profit
@@ -387,12 +393,16 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             return;
         }
 
+        if(reserve != 0){
+            //reset reserve so it doesnt interfere anywhere else
+            reserve = 0;
+        }
+
         //we are spending all our cash unless we have an outstanding debt (when we wont have any cash)
         uint _wantBal = want.balanceOf(address(this));
         if(outstanding > _wantBal){
-
             //withdrawn the money we need
-            _withdrawSome(outstanding.sub(_wantBal), false);
+            _withdrawSome(outstanding - _wantBal, false);
 
             return;
         }
@@ -421,7 +431,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     /*************
     * Very important function
-    * Input: amount we want to withdraw and whether we are happy to pay extra for Aave
+    * Input: amount we want to withdraw and whether we are happy to pay extra for Aave. 
+    *       cannot be more than we 
     * Returns amount we were able to withdraw
     *
     * Deleverage position -> redeem our cTokens
@@ -464,15 +475,14 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         
         //now withdraw
         //if we want too much we just take max
-        CErc20I cd = CErc20I(cDAI);
 
         //This part makes sure our withdrawal does not force us into liquidation        
         (uint depositBalance ,uint borrowBalance) = getCurrentPosition();
         uint AmountNeeded = borrowBalance.mul(1e18).div(collateralTarget);
         if(depositBalance.sub(AmountNeeded) < _amount){
-            cd.redeemUnderlying(depositBalance.sub(AmountNeeded));
+            cDAI.redeemUnderlying(depositBalance.sub(AmountNeeded));
         }else{
-            cd.redeemUnderlying(_amount);
+            cDAI.redeemUnderlying(_amount);
         }
 
         //let's sell some comp if we have more than needed
@@ -488,15 +498,15 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     *  This is the main logic for calculating how to change our lends and borrows
     *  Input: balance. The net amount we are going to deposit/withdraw.
     *  Input: dep. Is it a deposit or withdrawal
-    *  Output: position. The amount we want to change our current position. 
+    *  Output: position. The amount we want to change our current borrow position.                   
     *  Output: deficit. True if we are reducing position size
     *
+    *  For instance deficit =false, position 100 means increase borrowed balance by 100
     ****** */
-    // This is the main function works out what we want to change with our flash loan
-    // . and dep is whether is this a deposit or withdrawal  
-    //returns our position change      
-    function _calculateDesiredPosition(uint256 balance, bool dep) internal view returns (uint256 position, bool deficit) {
-        (uint256 deposits, uint256 borrows) = getCurrentPosition();
+    function _calculateDesiredPosition(uint256 balance, bool dep) internal returns (uint256 position, bool deficit) {
+
+        //we want to use statechanging for safety
+        (uint deposits, uint borrows) = getLivePosition();
 
         //When we unwind we end up with the difference between borrow and supply
         uint unwoundDeposit = deposits.sub(borrows);
@@ -509,25 +519,40 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(dep){
             desiredSupply = unwoundDeposit.add(balance);
         }else{
-            require(unwoundDeposit >= balance); // dev: withdrawing more than balance
-            desiredSupply = unwoundDeposit.sub(balance);
+            require(unwoundDeposit >= balance); // dev: withdrawing more than balance. should be impossible
+            desiredSupply = unwoundDeposit.sub(balance);            
         }
 
-        //desired borrow is (leveraged targed-1)xbalance. So if we want 4x leverage (max allowed). we want to borrow 3x desired balance
-        //1e21 is 1e18 x 1000
-        uint leverageTarget = uint256(1e21).div(uint256(1e18).sub(collateralTarget));
-        uint desiredBorrow = desiredSupply.mul(leverageTarget.sub(1000)).div(1000);
+        //(ds *c)/(1-c)
+        uint num = desiredSupply.mul(collateralTarget);
+        uint den = uint256(1e18).sub(collateralTarget);
+
+        uint desiredBorrow = num.div(den);
+        if(desiredBorrow > 1e18 ){
+            //stop us going right up to the wire
+            desiredBorrow = desiredBorrow - 1e18;
+        }
 
         //now we see if we want to add or remove balance
         // if the desired borrow is less than our current borrow we are in deficit. so we want to reduce position
         if(desiredBorrow < borrows){
             deficit = true;
-            position = borrows.sub(desiredBorrow);
+            position = borrows - desiredBorrow; //safemath check done in if statement
+
         }else{
             //otherwise we want to increase position
-             deficit = false;
-            position = desiredBorrow.sub(borrows);
+            deficit = false;
+            position = desiredBorrow - borrows;
         }
+
+        //checks to see if we have maths problems. Leaving in comments incase you want to check my maths
+        /*uint AmountNeeded = desiredBorrow.mul(1e18).div(collateralTarget);
+        require(AmountNeeded < deposits.add(position).add(want.balanceOf(address(this))), "maths prob");
+
+         uint collat = uint(1e18).mul(desiredBorrow).div(deposits.add(position).add(want.balanceOf(address(this))));
+        require(collat <= collateralTarget , "maths prob2");
+        
+        require(desiredBorrow == position.add(borrows), "maths prob3");*/
 
     }
 
@@ -537,7 +562,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      */
     function liquidatePosition(uint256 _amount) internal override {
         
-        if(estimatedTotalAssets() <= _amount){
+        if(netBalanceLent() <= _amount){
             //if we cant afford to withdraw we take all we can
             //withdraw all we can
             exitPosition();
@@ -553,7 +578,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      function _claimComp() internal {
       
         CTokenI[] memory tokens = new CTokenI[](1);
-        tokens[0] =  CTokenI(cDAI);
+        tokens[0] =  cDAI;
 
         compound.claimComp(address(this), tokens);
     }
@@ -585,27 +610,23 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      */
     function exitPosition() internal override {
 
-        CErc20I cd = CErc20I(cDAI);
         //we dont use getCurrentPosition() because it won't be exact
-        uint lent = cd.balanceOfUnderlying(address(this));
-        uint borrowed = cd.borrowBalanceCurrent(address(this));
-        _withdrawSome(lent.sub(borrowed), true);
+         (uint deposits, uint borrows) = getLivePosition();
+        _withdrawSome(deposits.sub(borrows), true);
 
     }
 
     //lets leave
     function prepareMigration(address _newStrategy) internal override{
         exitPosition();
-
-         CErc20I cd = CErc20I(cDAI);
        
-        (, , uint borrowBalance,) = cd.getAccountSnapshot(address(this));
+        (, , uint borrowBalance,) = cDAI.getAccountSnapshot(address(this));
 
         require(borrowBalance ==0);// dev: not ready to migrate. deleverage first
 
         want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
 
-        cd.transfer(_newStrategy, cd.balanceOf(address(this)));
+        cDAI.transfer(_newStrategy, cDAI.balanceOf(address(this)));
 
     }
 
@@ -613,31 +634,31 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
 
     //Three functions covering normal leverage and deleverage situations
+    // max is the max amount we want to increase our borrowed balance
+    // returns the amount we actually did
     function _noFlashLoan(uint256 max, bool deficit) internal returns (uint256 amount){
-        CErc20I cd =CErc20I(cDAI);
-        uint lent = cd.balanceOfUnderlying(address(this));
 
-        //we can use stored because interest was accrued in last line
-        uint borrowed = cd.borrowBalanceStored(address(this));
+        //we can use non-state changing because this function is always called after _calculateDesiredPosition
+        (uint lent, uint borrowed) = getCurrentPosition();
+       
         if(borrowed == 0){
              return 0;
          }
 
-        (, uint collateralFactorMantissa,) = compound.markets(cDAI);
+        (, uint collateralFactorMantissa,) = compound.markets(address(cDAI));
 
         if(deficit){
            amount = _normalDeleverage(max, lent, borrowed, collateralFactorMantissa);
         }else{
-            _normalLeverage(max, lent, borrowed, collateralFactorMantissa);
+           amount = _normalLeverage(max, lent, borrowed, collateralFactorMantissa);
         }
 
+        
         emit Leverage(max, amount, deficit,  address(0));
     }
 
-        //maxDeleverage is how much we want to reduce by
+    //maxDeleverage is how much we want to reduce by
     function _normalDeleverage(uint256 maxDeleverage, uint lent, uint borrowed, uint collatRatio) internal returns (uint256 deleveragedAmount) {
-        
-         CErc20I cd =CErc20I(cDAI);
 
         uint theoreticalLent = borrowed.mul(1e18).div(collatRatio);
 
@@ -650,15 +671,14 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             deleveragedAmount = maxDeleverage;
         }
 
-        cd.redeemUnderlying(deleveragedAmount);
+        cDAI.redeemUnderlying(deleveragedAmount);
         
-        cd.repayBorrow(deleveragedAmount);
+        //our borrow has been increased by no more than maxDeleverage
+        cDAI.repayBorrow(deleveragedAmount);
     }
 
-    //maxDeleverage is how much we want to reduce by
+    //maxDeleverage is how much we want to increase by
     function _normalLeverage(uint256 maxLeverage, uint lent, uint borrowed, uint collatRatio) internal returns (uint256 leveragedAmount){
-
-        CErc20I cd =CErc20I(cDAI);
 
         uint theoreticalBorrow = lent.mul(collatRatio).div(1e18);
 
@@ -668,36 +688,28 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             leveragedAmount = maxLeverage;
         }
 
-        cd.borrow(leveragedAmount);
-        cd.mint(leveragedAmount);
+        cDAI.borrow(leveragedAmount);
+        cDAI.mint(want.balanceOf(address(this)));
 
     }
 
-
-    function _Down(uint redeem, uint repay) internal {
-        CErc20I cd =CErc20I(cDAI);
-
-        cd.redeemUnderlying(redeem);
-        
-        cd.repayBorrow(repay);
-    }
     function _loanLogic(bool deficit, uint256 amount, uint256 repayAmount) internal {
-        CErc20I cd = CErc20I(cDAI);
-
         //if in deficit we repay amount and then withdraw
         if(deficit) {
            
 
-            cd.repayBorrow(amount);
+            cDAI.repayBorrow(amount);
 
-            //if we are withdrawing we take more
-            cd.redeemUnderlying(repayAmount);
-        } else {
-            uint amIn = want.balanceOf(address(this));
+            //if we are withdrawing we take more to cover fee
+            cDAI.redeemUnderlying(repayAmount);
+        } else {   
+      
+            require(cDAI.mint(want.balanceOf(address(this))) == 0, "mint error");
 
-            cd.mint(amIn);
-           
-            cd.borrow(repayAmount);
+            //borrow more to cover fee
+            // fee is so low for dydx that it does not effect our liquidation risk. 
+            //DONT USE FOR AAVE
+            cDAI.borrow(repayAmount);
 
         }
     }
@@ -718,7 +730,11 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     ****************/
 
     // Flash loan DXDY
+    // amount desired is how much we are willing for position to change
     function doDyDxFlashLoan(bool deficit, uint256 amountDesired) internal returns (uint256) {
+        uint borrowbefore = cDAI.borrowBalanceCurrent(address(this));
+        
+
         uint amount = amountDesired;
         ISoloMargin solo = ISoloMargin(SOLO);
 
@@ -755,7 +771,25 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         emit Leverage(amountDesired, amount, deficit, SOLO);
 
+        ( , uint256 borrowAfter) = getCurrentPosition();
+        if(deficit){
+            require(borrowbefore == borrowAfter.add(amount), "deficit wrong");
+        }else{
+            require(borrowbefore == borrowAfter.sub(repayAmount), "increase wrong");
+        }
+        //require our collat ratio is below target
+        
+        require (storedCollateralisation()<= collateralTarget, "Over collateral target?!");
+
         return amount;
+     }
+
+    //returns our current collateralisation ratio. Should be compared with collateralTarget
+     function storedCollateralisation() public view returns (uint256 collat){
+          ( uint256 lend, uint256 borrow) = getCurrentPosition();
+
+         collat = uint(1e18).mul(borrow).div(lend);
+
      }
 
     //DyDx calls this function after doing flash loan

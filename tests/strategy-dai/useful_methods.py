@@ -48,16 +48,17 @@ def stateOfStrat(strategy, dai):
     else:
         collat = borrows / deposits
     leverage = 1 / (1 - collat)
-    print(f'collat: {collat:.5%}')
+    print(f'calculated collat: {collat:.5%}')
+    storedCollat = strategy.storedCollateralisation().to('ether')
+    print(f'stored collat: {storedCollat:.5%}') 
     print(f'leverage: {leverage:.5f}x')
-    
-    assert( collat < strategy.collateralTarget()/1e18, "Over collateral target!")
+    assert collat <= strategy.collateralTarget()/1e18
     print('Expected Profit:', strategy.expectedReturn().to('ether'))
 
 def assertCollateralRatio(strategy):
     deposits, borrows = strategy.getCurrentPosition()
     collat = borrows / deposits
-    assert( collat <strategy.collateralTarget()/1e18, "Over collateral target!")
+    assert collat <strategy.collateralTarget()/1e18
 
 def stateOfVault(vault, strategy):
     print('\n----state of vault----')
@@ -84,11 +85,9 @@ def withdraw(share,whale, dai, vault):
     print(f'\n----user withdraws 1/{share} shares----')
     balanceBefore = dai.balanceOf(whale)
     balance = vault.balanceOf(whale)
-    print(balance)
-     
+   
      
     withdraw = min(balance, balance/share)
-    print(withdraw)
     vault.withdraw(withdraw, {'from': whale})
     balanceAfter = dai.balanceOf(whale)
     moneyOut = balanceAfter-balanceBefore

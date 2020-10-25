@@ -13,6 +13,10 @@ def comp(interface):
 def cdai(interface):
     yield interface.CErc20I('0x5d3a536e4d6dbd6114cc1ead35777bab948e3643')
 
+@pytest.fixture(autouse=True)
+def isolation(fn_isolation):
+    pass
+
 @pytest.fixture
 def gov(accounts):
     yield accounts[0]
