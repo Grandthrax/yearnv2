@@ -3,6 +3,44 @@ from brownie import Wei, reverts
 from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest,assertCollateralRatio
 import brownie
 
+
+def test_profit_is_expected(web3, chain, comp, vault, enormousrunningstrategy, whale, gov, dai, strategist, isolation):
+    enormousrunningstrategy.setGasFactor(1, {"from": strategist} )
+    assert(enormousrunningstrategy.gasFactor() == 1)
+
+    startingBalance = vault.totalAssets()
+
+    stateOfStrat(enormousrunningstrategy, dai, comp)
+    stateOfVault(vault, enormousrunningstrategy)
+
+    for i in range(100):
+        assert vault.creditAvailable(enormousrunningstrategy) == 0
+        waitBlock = 25
+        print(f'\n----wait {waitBlock} blocks----')
+        chain.mine(waitBlock)
+        
+        harvest(enormousrunningstrategy, strategist, vault)
+        stateOfStrat(enormousrunningstrategy, dai, comp)
+        stateOfVault(vault, enormousrunningstrategy)
+
+        profit = (vault.totalAssets() - startingBalance).to('ether')
+        strState = vault.strategies(enormousrunningstrategy)
+        totalReturns = strState[6]
+        totaleth = totalReturns.to('ether')
+        print(f'Real Profit: {profit:.5f}')
+        difff= profit-totaleth
+        print(f'Diff: {difff}')
+
+        blocks_per_year = 2_300_000
+        assert startingBalance != 0
+        time =(i+1)*waitBlock
+        assert time != 0
+        apr = (totalReturns/startingBalance) * (blocks_per_year / time)
+        print(f'implied apr: {apr:.8%}')
+
+
+
+
 def test_getting_too_close_to_liq(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai):
 
     stateOfStrat(largerunningstrategy, dai, comp)

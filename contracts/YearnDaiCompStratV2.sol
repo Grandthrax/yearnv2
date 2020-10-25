@@ -133,11 +133,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         uint estimateAssets =  estimatedTotalAssets();
 
         uint debt = vault.strategies(address(this)).totalDebt;
-        uint total_returned = vault.strategies(address(this)).totalReturns;
-        if(debt.add(total_returned) > estimateAssets){
+        if(debt > estimateAssets){
             return 0;
         }else{
-            return estimateAssets - debt - total_returned; //dont need safe math 
+            return estimateAssets - debt; //dont need safe math 
         }
 
     }

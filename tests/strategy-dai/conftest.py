@@ -85,3 +85,19 @@ def largerunningstrategy(gov, strategy, dai, vault, whale):
     
     yield strategy
 
+@pytest.fixture
+def enormousrunningstrategy(gov, largerunningstrategy, dai, vault, whale):
+    dai.approve(vault, dai.balanceOf(whale), {'from': whale})
+    vault.deposit(dai.balanceOf(whale), {'from': whale})   
+   
+    collat = 0
+
+    while collat < largerunningstrategy.collateralTarget() / 1.001e18:
+
+        largerunningstrategy.harvest({'from': gov})
+        deposits, borrows = largerunningstrategy.getCurrentPosition()
+        collat = borrows / deposits
+        
+    
+    yield largerunningstrategy
+

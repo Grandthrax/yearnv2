@@ -62,8 +62,10 @@ def stateOfStrat(strategy, dai, comp):
     print('DAI:',dai.balanceOf(strategy).to('ether'))
     print('borrows:', Wei(borrows).to('ether'))  
     print('deposits:', Wei(deposits).to('ether'))
+    realbalance = dai.balanceOf(strategy) + deposits - borrows
+    print('total assets real:', realbalance.to('ether'))  
 
-    print('total assets:', strategy.estimatedTotalAssets().to('ether'))  
+    print('total assets estimate:', strategy.estimatedTotalAssets().to('ether'))  
     if deposits == 0:
         collat = 0 
     else:
