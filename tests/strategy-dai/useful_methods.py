@@ -1,6 +1,13 @@
 from itertools import count
-from brownie import Wei, reverts
+from brownie import Wei, reverts, network
 import brownie
+import requests
+
+def get_gas_price(confirmation_speed: str = "fast"):
+    if "mainnet" not in network.show_active():
+        return 10 ** 9  # 1 gwei
+    data = requests.get("https://www.gasnow.org/api/v3/gas/price").json()
+    return data["data"][confirmation_speed]
 
 
 def initialMigrate(strategy,vault, whale, ychad, dai, controller):
@@ -23,9 +30,9 @@ def initialMigrate(strategy,vault, whale, ychad, dai, controller):
 
 def harvest(strategy, keeper, vault):
     # Evaluate gas cost of calling harvest
-    gasprice = 30000000000 # aprox usd price only for testing 30 gwei
-    # txgas = strategy.harvest.estimate_gas()
-    txgas = 1500000 #1.5m
+    gasprice = get_gas_price()
+    txgas = strategy.harvest.estimate_gas()
+    #txgas = 1500000 #1.5m
     txGasCost = txgas * gasprice
     avCredit = vault.creditAvailable(strategy)
     if avCredit > 0:
@@ -34,6 +41,7 @@ def harvest(strategy, keeper, vault):
     if harvestCondition:
         print('\n----bot calls harvest----')
         print('Tx harvest() gas cost: ', txGasCost/1e18)
+        print('Gas price: ', gasprice/1e9)
         strategy.harvest({'from': keeper})
 
 def tend(strategy, keeper):

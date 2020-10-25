@@ -170,7 +170,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         uint256 estimatedDAI = latestExchangeRate.mul(_claimableComp.add(currentComp));
         
-        uint256 conservativeDai = estimatedDAI.mul(10).div(9);
+        uint256 conservativeDai = estimatedDAI.mul(9).div(10);
         
         return want.balanceOf(address(this)).add(deposits).add(conservativeDai).sub(borrows);
 
