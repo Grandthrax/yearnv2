@@ -62,11 +62,12 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     //Operating variables
     uint256 public collateralTarget = 0.73 ether;  // 73% 
-    uint256 public blocksToLiquidationDangerZone = 6650;  // 24 hours =  60*60*24/13
+    uint256 public blocksToLiquidationDangerZone = 46500;  // 24 hours =  60*60*24*7/13
 
 
     uint256 public minDAI = 100 ether; //lending and borrowing is expensive. Only do if we have enough DAI to be worth it
-    uint256 public minCompToSell = 0.1 ether; //used both as the threshold to sell but also as a trigger for harvest
+    uint256 public minCompToSell = 0.5 ether; //used both as the threshold to sell but also as a trigger for harvest
+    uint256 public gasFactor = 10; // multiple before triggering harvest
 
     //To deactivate flash loan provider if needed
     bool public DyDxActive = true;
@@ -88,20 +89,32 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     * Control Functions
     */
     function disableDyDx() external {
-        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
+        require(msg.sender == governance() || msg.sender == strategist, "!management");// dev: not governance or strategist
         DyDxActive = false;
     }
     function enableDyDx() external {
-        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
+        require(msg.sender == governance() || msg.sender == strategist, "!management");// dev: not governance or strategist
         DyDxActive = true;
     }
     function disableAave() external {
-        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
+        require(msg.sender == governance() || msg.sender == strategist, "!management");// dev: not governance or strategist
         AaveActive = false;
     }
     function enableAave() external {
-        require(msg.sender == governance() || msg.sender == strategist);// dev: not governance or strategist
+        require(msg.sender == governance() || msg.sender == strategist, "!management");// dev: not governance or strategist
         AaveActive = true;
+    }
+    function setGasFactor(uint _gasFactor) external {
+        require(msg.sender == governance() || msg.sender == strategist, "!management");// dev: not governance or strategist
+        gasFactor = _gasFactor;
+    }
+    function setMinCompToSell(uint _minCompToSell) external {
+        require(msg.sender == governance() || msg.sender == strategist, "!management");// dev: not governance or strategist
+        minCompToSell = _minCompToSell;
+    }
+    function setCollateralTarget(uint _collateralTarget) external {
+        require(msg.sender == governance() || msg.sender == strategist, "!management");// dev: not governance or strategist
+        collateralTarget = _collateralTarget;
     }
 
     /*
@@ -149,7 +162,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     function estimatedTotalAssets() public override view returns (uint256) {
         (uint deposits, uint borrows) = getCurrentPosition();
         
-        uint256 _claimableComp = _predictCompAccrued();
+        uint256 _claimableComp = predictCompAccrued();
         uint currentComp = IERC20(comp).balanceOf(address(this));
 
         // Use chainlink price feed to retrieve COMP and DAI prices expressed in USD. then convert
@@ -173,7 +186,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
       ( , uint256 price_comp, , ,  ) = AggregatorV3Interface(COMP2USD).latestRoundData();
       ( , uint256 price_dai, , ,  ) = AggregatorV3Interface(DAI2USD).latestRoundData();
       
-      return price_comp.div(price_dai);
+      return price_comp.mul(1 ether).div(price_dai).div(1 ether);
     }
 
     function getCompValInWei(uint256 _amount) public view returns(uint256) {
@@ -224,12 +237,12 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }
 
         // after enough comp has accrued we want the bot to run
-        uint256 _claimableComp = _predictCompAccrued();
+        uint256 _claimableComp = predictCompAccrued();
 
         if(_claimableComp > minCompToSell) {
             // check value of COMP in wei
-            uint256 _compWei = getCompValInWei(_claimableComp).mul(10); // testing as `gasFactor`
-            if(_compWei > gasCost) {
+            uint256 _compWei = getCompValInWei(_claimableComp.add(IERC20(comp).balanceOf(address(this))));
+            if(_compWei > gasCost.mul(gasFactor)) {
                 return true;
             }
         }
@@ -277,7 +290,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     // This function makes a prediction on how much comp is accrued
     // It is not 100% accurate as it uses current balances in Compound to predict into the past
     // A completey accurate number requires state changing calls
-    function _predictCompAccrued() internal view returns (uint) {
+    function predictCompAccrued() public view returns (uint) {
         
         (uint256 deposits, uint256 borrows) = getCurrentPosition();
         if(deposits == 0){
@@ -532,7 +545,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(dep){
             desiredSupply = unwoundDeposit.add(balance);
         }else{
-            require(unwoundDeposit >= balance); // dev: withdrawing more than balance. should be impossible
             desiredSupply = unwoundDeposit.sub(balance);            
         }
 
@@ -635,7 +647,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
        
         (, , uint borrowBalance,) = cDAI.getAccountSnapshot(address(this));
 
-        require(borrowBalance ==0);// dev: not ready to migrate. deleverage first
+        require(borrowBalance ==0, "DELEVERAGE_FIRST");// dev: not ready to migrate. deleverage first
 
         want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
 
@@ -800,7 +812,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     //returns our current collateralisation ratio. Should be compared with collateralTarget
      function storedCollateralisation() public view returns (uint256 collat){
           ( uint256 lend, uint256 borrow) = getCurrentPosition();
-
+        if(lend == 0){
+            return 0;
+        }
          collat = uint(1e18).mul(borrow).div(lend);
 
      }

@@ -27,6 +27,11 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
     #deploy strategy
     strategy = strategist.deploy(YearnDaiCompStratV2, vault)
 
+    strategy.setGasFactor(1, {"from": strategist} )
+    assert(strategy.gasFactor() == 1)
+    strategy.setMinCompToSell(Wei('0.1 ether'), {"from": strategist} )
+    assert(strategy.minCompToSell() == Wei('0.1 ether'))
+
     #Current comp/eth rate
     compEthRate = strategy.getCompValInWei(Wei('1 ether'))
     print('Current comp/eth rate:', compEthRate)
@@ -37,7 +42,7 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
 
     #our humble strategist deposits some test funds
     deposit( Wei('1000 ether'), strategist, dai, vault)
-    stateOfStrat(strategy, dai)
+    stateOfStrat(strategy, dai, comp)
     stateOfVault(vault, strategy)
     assert strategy.estimatedTotalAssets() == 0
 
@@ -48,11 +53,13 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
 
     for i in range(100):
         assertCollateralRatio(strategy)
-        waitBlock = random.randint(1,20)
+        waitBlock = random.randint(10,50)
         print(f'\n----wait {waitBlock} blocks----')
         chain.mine(waitBlock)
 
         #if harvest condition harvest. if tend tend
+        print(strategy.predictCompAccrued().to('ether'), ' comp prediction')
+        print(comp.balanceOf(strategy).to('ether'), ' comp in balance')
         harvest(strategy, strategist, vault)
         tend(strategy, strategist)
         something= True
@@ -69,12 +76,12 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
             something = False
 
         if something:
-            stateOfStrat(strategy, dai)
+            stateOfStrat(strategy, dai, comp)
             stateOfVault(vault, strategy)
 
     #strategist withdraws
     withdraw(1, strategist, dai, vault)
-    stateOfStrat(strategy, dai)
+    stateOfStrat(strategy, dai, comp)
     stateOfVault(vault, strategy)
 
     profit = dai.balanceOf(strategist) - starting_balance

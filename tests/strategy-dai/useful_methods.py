@@ -23,14 +23,17 @@ def initialMigrate(strategy,vault, whale, ychad, dai, controller):
 
 def harvest(strategy, keeper, vault):
     # Evaluate gas cost of calling harvest
-    latestEthPrice = 400 # aprox usd price only for testing
-    tx = strategy.harvest()
-    txGasCost = tx.gas_used * latestEthPrice
-    print('Tx harvest() gas cost: ', txGasCost)
-    print('Available credit from vault: ', vault.creditAvailable(strategy))
+    gasprice = 30000000000 # aprox usd price only for testing 30 gwei
+    # txgas = strategy.harvest.estimate_gas()
+    txgas = 1500000 #1.5m
+    txGasCost = txgas * gasprice
+    avCredit = vault.creditAvailable(strategy)
+    if avCredit > 0:
+        print('Available credit from vault: ', avCredit/1e18)
     harvestCondition = strategy.harvestTrigger(txGasCost, {'from': keeper})
     if harvestCondition:
         print('\n----bot calls harvest----')
+        print('Tx harvest() gas cost: ', txGasCost/1e18)
         strategy.harvest({'from': keeper})
 
 def tend(strategy, keeper):
@@ -41,12 +44,16 @@ def tend(strategy, keeper):
         print('\n----bot calls tend----')
         strategy.tend({'from': keeper})
 
-def stateOfStrat(strategy, dai):
+def stateOfStrat(strategy, dai, comp):
     print('\n----state of strat----')
+    
     deposits, borrows = strategy.getCurrentPosition()
+    compBal = comp.balanceOf(strategy)
+    print('Comp:', Wei(compBal).to('ether'))
     print('DAI:',dai.balanceOf(strategy).to('ether'))
     print('borrows:', Wei(borrows).to('ether'))  
     print('deposits:', Wei(deposits).to('ether'))
+
     print('total assets:', strategy.estimatedTotalAssets().to('ether'))  
     if deposits == 0:
         collat = 0 

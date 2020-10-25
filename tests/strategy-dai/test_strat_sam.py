@@ -47,11 +47,15 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
 
     # Nothing was reported yet from the strategy
     assert vault.expectedReturn(strategy) == 0
-    stateOfStrat(strategy,dai)
+
+
 
     depositLimit = Wei('500000 ether')
     vault.setDepositLimit(depositLimit, {"from": gov})
     assert vault.depositLimit() == depositLimit 
+
+    #set compToSell
+
     
     # Provide funds to the Vault from whale
    
