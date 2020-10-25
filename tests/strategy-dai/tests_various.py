@@ -1,7 +1,31 @@
 from itertools import count
 from brownie import Wei, reverts
-from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest
+from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest,assertCollateralRatio
 import brownie
+
+def test_getting_too_close_to_liq(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai):
+
+    stateOfStrat(largerunningstrategy, dai, comp)
+    stateOfVault(vault, largerunningstrategy)
+    largerunningstrategy.setCollateralTarget(Wei('0.74999999999 ether'), {"from": gov} )
+    deposit(Wei('1000 ether'), whale, dai, vault)
+
+    balanceBefore = vault.totalAssets()
+    collat = 0
+
+    while collat < largerunningstrategy.collateralTarget() / 1.001e18:
+
+        largerunningstrategy.harvest({'from': gov})
+        deposits, borrows = largerunningstrategy.getCurrentPosition()
+        collat = borrows / deposits
+
+        stateOfStrat(largerunningstrategy, dai, comp)
+        stateOfVault(vault, largerunningstrategy)
+        assertCollateralRatio(largerunningstrategy)
+
+    print(largerunningstrategy.getblocksUntilLiquidation())
+    print(largerunningstrategy.tendTrigger(0))
+    largerunningstrategy.tend({'from': gov})
 
 def test_profit_is_registered(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai):
 

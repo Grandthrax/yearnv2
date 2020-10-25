@@ -64,7 +64,7 @@ def stateOfStrat(strategy, dai, comp):
     storedCollat = strategy.storedCollateralisation().to('ether')
     print(f'stored collat: {storedCollat:.5%}') 
     print(f'leverage: {leverage:.5f}x')
-    assert collat <= strategy.collateralTarget()/1e18
+    assert collat <= 0.75
     print('Expected Profit:', strategy.expectedReturn().to('ether'))
 
 def assertCollateralRatio(strategy):

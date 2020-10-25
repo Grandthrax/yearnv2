@@ -52,7 +52,7 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
     deposit( Wei('1000 ether'), whale, dai, vault)
 
     for i in range(100):
-        assertCollateralRatio(strategy)
+        #assertCollateralRatio(strategy)
         waitBlock = random.randint(10,50)
         print(f'\n----wait {waitBlock} blocks----')
         chain.mine(waitBlock)
