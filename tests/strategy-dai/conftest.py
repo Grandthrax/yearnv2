@@ -57,7 +57,7 @@ def seededvault(vault, dai, rando):
 
 @pytest.fixture
 def strategy(gov, strategist, dai, vault, YearnDaiCompStratV2):
-    strategy = strategist.deploy(YearnDaiCompStratV2, vault)
+    strategy = strategist.deploy(YearnDaiCompStratV2,'0xc00e94Cb662C3520282E6f5717214004A7f26888', vault)
 
     vault.addStrategy(
         strategy,

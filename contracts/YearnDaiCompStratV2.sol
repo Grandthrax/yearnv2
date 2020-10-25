@@ -52,7 +52,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     ComptrollerI public constant compound = ComptrollerI(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B); 
 
     //Only three tokens we use
-    address public constant comp = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+    address public immutable comp;
     CErc20I public constant cDAI = CErc20I(address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643));
     address public constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
@@ -73,13 +73,14 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     bool public DyDxActive = true;
     bool public AaveActive = true;
 
-    constructor(address _vault) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING)
+    constructor(address _vault, address _comp) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING)
     {
         //only accept DAI vault
-        require(vault.token() == DAI, "!DAI");
+        //require(vault.token() == DAI, "!DAI");
+        comp = _comp;
                     
         //pre-set approvals
-        IERC20(comp).safeApprove(uniswapRouter, uint256(-1));
+        IERC20(_comp).safeApprove(uniswapRouter, uint256(-1));
         want.safeApprove(address(cDAI), uint256(-1));
         want.safeApprove(SOLO, uint256(-1));
 
