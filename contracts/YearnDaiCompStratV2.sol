@@ -44,6 +44,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     // Chainlink price feed contracts
     address private constant COMP2USD = 0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5;
     address private constant DAI2USD = 0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9;
+    address private constant ETH2USD = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     //AggregatorV3Interface internal COMP2USD = AggregatorV3Interface(0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5);
     //AggregatorV3Interface internal DAI2USD = AggregatorV3Interface(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9);
 
@@ -175,6 +176,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
       return price_comp.div(price_dai);
     }
 
+    function getCompValInWei(uint256 _amount) public view returns(uint256) {
+      ( , uint256 price_comp, , ,  ) = AggregatorV3Interface(COMP2USD).latestRoundData();
+      ( , uint256 price_eth, , ,  ) = AggregatorV3Interface(ETH2USD).latestRoundData();
+      
+      return price_comp.mul(1 ether).div(price_eth).mul(_amount).div(1 ether);
+    }
+
     /*
      * Provide a signal to the keeper that `tend()` should be called. The keeper will provide
      * the estimated gas cost that they would pay to call `tend()`, and this function should
@@ -216,9 +224,14 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }
 
         // after enough comp has accrued we want the bot to run
-        // future extension could be checking value of comp and comparing to gas
-        if(_predictCompAccrued() > minCompToSell){
-            return true;
+        uint256 _claimableComp = _predictCompAccrued();
+
+        if(_claimableComp > minCompToSell) {
+            // check value of COMP in wei
+            uint256 _compWei = getCompValInWei(_claimableComp).mul(10); // testing as `gasFactor`
+            if(_compWei > gasCost) {
+                return true;
+            }
         }
        
         return false;

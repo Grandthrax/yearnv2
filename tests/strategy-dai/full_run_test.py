@@ -27,6 +27,10 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
     #deploy strategy
     strategy = strategist.deploy(YearnDaiCompStratV2, vault)
 
+    #Current comp/eth rate
+    compEthRate = strategy.getCompValInWei(Wei('1 ether'))
+    print('Current comp/eth rate:', compEthRate)
+
     #enable the strategy
     rate_limit = deposit_limit
     vault.addStrategy(strategy, deposit_limit, rate_limit, 50, {"from": strategist})
@@ -37,7 +41,7 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
     stateOfVault(vault, strategy)
     assert strategy.estimatedTotalAssets() == 0
 
-    harvest(strategy, strategist)
+    harvest(strategy, strategist, vault)
 
     #whale deposits as well
     deposit( Wei('1000 ether'), whale, dai, vault)
@@ -49,7 +53,7 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
         chain.mine(waitBlock)
 
         #if harvest condition harvest. if tend tend
-        harvest(strategy, strategist)
+        harvest(strategy, strategist, vault)
         tend(strategy, strategist)
         something= True
         action = random.randint(0,9)
