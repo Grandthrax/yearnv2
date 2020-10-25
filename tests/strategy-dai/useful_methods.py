@@ -30,9 +30,10 @@ def initialMigrate(strategy,vault, whale, ychad, dai, controller):
 
 def harvest(strategy, keeper, vault):
     # Evaluate gas cost of calling harvest
-    gasprice = get_gas_price()
-    txgas = strategy.harvest.estimate_gas()
-    #txgas = 1500000 #1.5m
+    #gasprice = get_gas_price()
+    gasprice = 30*1e9
+    #txgas = strategy.harvest.estimate_gas()
+    txgas = 1500000 #1.5m
     txGasCost = txgas * gasprice
     avCredit = vault.creditAvailable(strategy)
     if avCredit > 0:

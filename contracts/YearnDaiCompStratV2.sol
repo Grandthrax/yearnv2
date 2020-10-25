@@ -131,11 +131,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      */
     function expectedReturn() public override view returns (uint256) {
         uint estimateAssets =  estimatedTotalAssets();
+
         uint debt = vault.strategies(address(this)).totalDebt;
-        if(debt > estimateAssets){
+        uint total_returned = vault.strategies(address(this)).totalReturns;
+        if(debt.add(total_returned) > estimateAssets){
             return 0;
         }else{
-            return estimateAssets - debt; //dont need safe math 
+            return estimateAssets - debt - total_returned; //dont need safe math 
         }
 
     }

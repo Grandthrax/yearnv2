@@ -65,11 +65,11 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
         something= True
         action = random.randint(0,9)
         if action == 1:
-            withdraw(random.randint(2,100),whale, dai, vault)
+            withdraw(random.randint(50,100),whale, dai, vault)
         elif action == 2:
-            withdraw(random.randint(2,100),whale, dai, vault)
+            withdraw(random.randint(50,100),whale, dai, vault)
         elif action == 3:
-            deposit(Wei(str(f'{random.randint(100,100000)} ether')), whale, dai, vault)
+            deposit(Wei(str(f'{random.randint(10000,100000)} ether')), whale, dai, vault)
         elif action >3 and action < 6:
             cdai.mint(1, {"from": whale})
         else :
