@@ -1,7 +1,7 @@
 from pathlib import Path
 import yaml
 
-from brownie import Token, Vault, accounts, network, web3
+from brownie import Token, Vault, accounts, network, web3, Wei
 from eth_utils import is_checksum_address
 
 PACKAGE_VERSION = yaml.safe_load(
@@ -24,13 +24,19 @@ def get_address(msg: str) -> str:
 
 def main():
     print(f"You are using the '{network.show_active()}' network")
-    dev = accounts.load("dev")
+    account_name = input(f"What account to use?: ")
+    dev = accounts.load(account_name)
     print(f"You are using: 'dev' [{dev.address}]")
     token = Token.at(get_address("ERC20 Token: "))
-    gov = get_address("yEarn Governance: ")
-    rewards = get_address("Rewards contract: ")
-    name = input(f"Set description ['yearn {token.name()}']: ") or ""
-    symbol = input(f"Set symbol ['y{token.symbol()}']: ") or ""
+    #token = Token.at("0x6B175474E89094C44Da98b954EedeAC495271d0F")
+    #gov = get_address("yEarn Governance: ")
+    gov = dev
+    #rewards = get_address("Rewards contract: ")
+    rewards = dev
+    #name = input(f"Set description ['yearn {token.name()}']: ") or ""
+    name = "yDAI Test Vault V2"
+    #symbol = input(f"Set symbol ['y{token.symbol()}']: ") or ""
+    symbol = 'ytDAI'
     print(
         f"""
     Vault Parameters
@@ -46,4 +52,4 @@ def main():
     if input("Deploy New Vault? y/[N]: ").lower() != "y":
         return
     print("Deploying Vault...")
-    vault = dev.deploy(Vault, token, gov, rewards, name, symbol)
+    vault = Vault.deploy(token, gov, rewards, name, symbol,  {'from': dev, 'gas_price':Wei("16 gwei")})

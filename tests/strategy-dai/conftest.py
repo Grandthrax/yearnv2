@@ -6,6 +6,22 @@ def dai(interface):
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
 
 @pytest.fixture
+def live_vault(Vault):
+    yield Vault.at('0xc2cFcfa978a7fae529DC7E9Aa3CDBE7A727452Bc')
+
+@pytest.fixture
+def live_strategy(YearnDaiCompStratV2):
+    yield YearnDaiCompStratV2.at('0xEb1E2e30944797232C623498c546565a085B0623')
+
+@pytest.fixture
+def dai(interface):
+    yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+
+@pytest.fixture
+def samdev(accounts):
+    yield accounts.at('0xC3D6880fD95E06C816cB030fAc45b3ffe3651Cb0', force=True)
+
+@pytest.fixture
 def comp(interface):
     yield interface.ERC20('0xc00e94Cb662C3520282E6f5717214004A7f26888')
 
@@ -29,6 +45,7 @@ def whale(accounts, history, web3):
 @pytest.fixture
 def strategist(accounts, whale, dai):
     dai.transfer(accounts[1], Wei('10000 ether'), {'from': whale})
+    dai.transfer(accounts[0], Wei('10000 ether'), {'from': whale})
     yield accounts[1]
 
 @pytest.fixture

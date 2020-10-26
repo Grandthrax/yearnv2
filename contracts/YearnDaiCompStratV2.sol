@@ -375,7 +375,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         uint _wantBal = want.balanceOf(address(this));
         if(outstanding > _wantBal){
             //withdrawn the money we need. False so we dont use backup and pay aave fees for mature deleverage
-            _withdrawSome(outstanding - _wantBal, false);
+            (uint deposits, uint borrows) = getLivePosition();
+            _withdrawSome(deposits - borrows, false);
 
             return;
         }
@@ -405,7 +406,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     /*************
     * Very important function
     * Input: amount we want to withdraw and whether we are happy to pay extra for Aave. 
-    *       cannot be more than we 
+    *       cannot be more than we have
     * Returns amount we were able to withdraw. notall if user has some balance left
     *
     * Deleverage position -> redeem our cTokens
@@ -562,7 +563,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     function exitPosition() internal override {
 
         //we dont use getCurrentPosition() because it won't be exact
-         (uint deposits, uint borrows) = getLivePosition();
+        (uint deposits, uint borrows) = getLivePosition();
         _withdrawSome(deposits.sub(borrows), true);
 
     }

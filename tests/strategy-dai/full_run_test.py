@@ -38,7 +38,7 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
 
     #enable the strategy
     rate_limit = deposit_limit
-    vault.addStrategy(strategy, deposit_limit, rate_limit, 50, {"from": strategist})
+    vault.addStrategy(strategy, c, rate_limit, 50, {"from": strategist})
 
     #our humble strategist deposits some test funds
     deposit( Wei('1000 ether'), strategist, dai, vault)

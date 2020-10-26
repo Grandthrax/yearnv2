@@ -3,6 +3,29 @@ from brownie import Wei, reverts
 from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest,assertCollateralRatio
 import brownie
 
+def test_emergency_exit(web3,strategy, vault, chain, dai,cdai, gov, comp):
+    amount1 = Wei('500 ether')
+    deposit(amount1, gov, dai, vault)
+
+    strategy.harvest({'from': gov})
+    wait(30, chain)
+
+    assert vault.emergencyShutdown() == False
+
+    vault.setEmergencyShutdown(True, {"from": gov})
+    assert vault.emergencyShutdown()
+
+    stateOfStrat(strategy, dai, comp)
+    stateOfVault(vault, strategy)
+    strategy.harvest({'from': gov})
+    print('\n Emergency shut down + harvest done')
+    stateOfStrat(strategy, dai, comp)
+    stateOfVault(vault, strategy)
+
+    strategy.withdraw(strategy.balanceOf(gov), {'from': gov})
+
+    
+
 def test_sweep(web3,strategy, dai,cdai, gov, comp):
     with brownie.reverts("!protected"):
         strategy.sweep(dai, {"from": gov})
