@@ -52,4 +52,4 @@ def main():
     if input("Deploy New Vault? y/[N]: ").lower() != "y":
         return
     print("Deploying Vault...")
-    vault = Vault.deploy(token, gov, rewards, name, symbol,  {'from': dev, 'gas_price':Wei("16 gwei")})
+    vault = Vault.deploy(token, gov, rewards, name, symbol,  {'from': dev, 'gas_price':Wei("15 gwei")})

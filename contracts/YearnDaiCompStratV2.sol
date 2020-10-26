@@ -329,8 +329,17 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         //sell comp
         _disposeOfComp();
 
-        uint balance = estimatedTotalAssets();
         uint daiBalance = want.balanceOf(address(this));
+        if(outstanding > daiBalance){
+            //withdrawn the money we need. False so we dont use backup and pay aave fees for mature deleverage
+            (uint deposits, uint borrows) = getLivePosition();
+            _withdrawSome(deposits - borrows, false);
+
+            return;
+        }
+
+        uint balance = estimatedTotalAssets();
+        
         
         uint debt = vault.strategies(address(this)).totalDebt;
 
@@ -371,15 +380,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             reserve = 0;
         }
 
-        //we are spending all our cash unless we have an outstanding debt (when we wont have any cash)
-        uint _wantBal = want.balanceOf(address(this));
-        if(outstanding > _wantBal){
-            //withdrawn the money we need. False so we dont use backup and pay aave fees for mature deleverage
-            (uint deposits, uint borrows) = getLivePosition();
-            _withdrawSome(deposits - borrows, false);
-
-            return;
-        }
+        //we are spending all our cash unless
+        //we dont care about outstanding debt until next return
+        uint _wantBal = want.balanceOf(address(this));        
 
         // We pass in the balance we are adding. 
         // We get returned the amount we need to reduce or add to our loan positions to keep at our target collateral ratio
@@ -518,13 +521,14 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      * up to `_amount`. Any excess should be re-invested here as well.
      */
     function liquidatePosition(uint256 _amount) internal override {
+
+        uint256 _balance = want.balanceOf(address(this));
         
-        if(netBalanceLent() <= _amount){
+        if(netBalanceLent().add(_balance) < _amount){
             //if we cant afford to withdraw we take all we can
             //withdraw all we can
             exitPosition();
         }else{
-            uint256 _balance = want.balanceOf(address(this));
 
             if (_balance < _amount) {
                 require(!_withdrawSome(_amount.sub(_balance), true), "DelevFirst");

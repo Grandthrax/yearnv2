@@ -22,7 +22,11 @@ def test_emergency_exit(web3,strategy, vault, chain, dai,cdai, gov, comp):
     stateOfStrat(strategy, dai, comp)
     stateOfVault(vault, strategy)
 
-    strategy.withdraw(strategy.balanceOf(gov), {'from': gov})
+    print('\n Withdraw All')
+    vault.withdraw(vault.balanceOf(gov), {'from': gov})
+
+    stateOfStrat(strategy, dai, comp)
+    stateOfVault(vault, strategy)
 
     
 

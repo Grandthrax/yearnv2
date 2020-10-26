@@ -43,4 +43,4 @@ strategist: {dev}
     print("Deploying Strategy...")
     #0x1Fe16De955718CFAb7A44605458AB023838C2793 ropsten comp
     # 0xc00e94Cb662C3520282E6f5717214004A7f26888 mainnet comp
-    strategy = YearnDaiCompStratV2.deploy(vaultAddress,  {'gas_limit': 7900000, 'from': dev, 'gas_price':Wei("16 gwei")})
+    strategy = YearnDaiCompStratV2.deploy(vaultAddress,  {'gas_limit': 7900000, 'from': dev, 'gas_price':Wei("15 gwei")})

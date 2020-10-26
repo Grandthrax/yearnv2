@@ -38,7 +38,7 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
 
     #enable the strategy
     rate_limit = deposit_limit
-    vault.addStrategy(strategy, c, rate_limit, 50, {"from": strategist})
+    vault.addStrategy(strategy, rate_limit, rate_limit, 50, {"from": strategist})
 
     #our humble strategist deposits some test funds
     deposit( Wei('1000 ether'), strategist, dai, vault)
@@ -51,7 +51,7 @@ def test_full_live(web3, chain, comp, Vault,YearnDaiCompStratV2, dai, whale, str
     #whale deposits as well
     deposit( Wei('1000 ether'), whale, dai, vault)
 
-    for i in range(100):
+    for i in range(15):
         #assertCollateralRatio(strategy)
         waitBlock = random.randint(10,50)
         print(f'\n----wait {waitBlock} blocks----')
