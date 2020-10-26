@@ -45,18 +45,15 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     address private constant COMP2USD = 0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5;
     address private constant DAI2USD = 0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9;
     address private constant ETH2USD = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    //AggregatorV3Interface internal COMP2USD = AggregatorV3Interface(0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5);
-    //AggregatorV3Interface internal DAI2USD = AggregatorV3Interface(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9);
 
     // Comptroller address for compound.finance
     ComptrollerI public constant compound = ComptrollerI(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B); 
 
     //Only three tokens we use
-    address public immutable comp;
+    address public constant comp =  address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
     CErc20I public constant cDAI = CErc20I(address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643));
     address public constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
-    // used for comp <> weth <> dai route
     address public constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); 
 
@@ -64,8 +61,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     uint256 public collateralTarget = 0.73 ether;  // 73% 
     uint256 public blocksToLiquidationDangerZone = 46500;  // 24 hours =  60*60*24*7/13
 
-
-    uint256 public minDAI = 100 ether; //lending and borrowing is expensive. Only do if we have enough DAI to be worth it
+    uint256 public minDAI = 100 ether; //Only lend if we have enough DAI to be worth it
     uint256 public minCompToSell = 0.5 ether; //used both as the threshold to sell but also as a trigger for harvest
     uint256 public gasFactor = 10; // multiple before triggering harvest
 
@@ -73,14 +69,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     bool public DyDxActive = true;
     bool public AaveActive = true;
 
-    constructor(address _vault, address _comp) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING)
+    constructor(address _vault) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING)
     {
         //only accept DAI vault
-        //require(vault.token() == DAI, "!DAI");
-        comp = _comp;
+        require(vault.token() == DAI, "!DAI");
                     
         //pre-set approvals
-        IERC20(_comp).safeApprove(uniswapRouter, uint256(-1));
+        IERC20(comp).safeApprove(uniswapRouter, uint256(-1));
         want.safeApprove(address(cDAI), uint256(-1));
         want.safeApprove(SOLO, uint256(-1));
 
@@ -123,11 +118,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     */
 
     /*
-     * Provide an accurate expected value for the return this strategy
-     * would provide to the Vault the next time `report()` is called
-     * (since the last time it was called)
+     * Expected return this strategy would provide to the Vault the next time `report()` is called
      *
-     * In other words - the total assets currently in strategy minus what vault believes we have
+     * The total assets currently in strategy minus what vault believes we have
      * Does not include unrealised profit such as comp.
      */
     function expectedReturn() public override view returns (uint256) {
@@ -137,29 +130,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(debt > estimateAssets){
             return 0;
         }else{
-            return estimateAssets - debt; //dont need safe math 
+            return estimateAssets - debt;
         }
-
     }
 
     /*
-     * Provide an accurate estimate for the total amount of assets (principle + return)
-     * that this strategy is currently managing, denominated in terms of `want` tokens.
-     * This total should be "realizable" e.g. the total value that could *actually* be
-     * obtained from this strategy if it were to divest it's entire position based on
-     * current on-chain conditions.
-     *
-     * NOTE: care must be taken in using this function, since it relies on external
-     *       systems, which could be manipulated by the attacker to give an inflated
-     *       (or reduced) value produced by this function, based on current on-chain
-     *       conditions (e.g. this function is possible to influence through flashloan
-     *       attacks, oracle manipulations, or other DeFi attack mechanisms).
-     *
-     * NOTE: It is up to governance to use this function in order to correctly order
-     *       this strategy relative to its peers in order to minimize losses for the
-     *       Vault based on sudden withdrawals. This value should be higher than the
-     *       total debt of the strategy and higher than it's expected value to be "safe".
-     *
+     * An accurate estimate for the total amount of assets (principle + return)
+     * that this strategy is currently managing, denominated in terms of DAI tokens.
      */
     function estimatedTotalAssets() public override view returns (uint256) {
         (uint deposits, uint borrows) = getCurrentPosition();
@@ -167,12 +144,11 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         uint256 _claimableComp = predictCompAccrued();
         uint currentComp = IERC20(comp).balanceOf(address(this));
 
-        // Use chainlink price feed to retrieve COMP and DAI prices expressed in USD. then convert
+        // Use chainlink price feed to retrieve COMP and DAI prices expressed in USD. Then convert
         uint256 latestExchangeRate = getLatestExchangeRate();
 
         uint256 estimatedDAI = latestExchangeRate.mul(_claimableComp.add(currentComp));
-        
-        uint256 conservativeDai = estimatedDAI.mul(9).div(10);
+        uint256 conservativeDai = estimatedDAI.mul(9).div(10); //10% pessimist
         
         return want.balanceOf(address(this)).add(deposits).add(conservativeDai).sub(borrows);
 
@@ -180,8 +156,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     /*
      * Aggragate the value in USD for COMP and DAI onchain from different chainlink nodes
-     * reducing risk of price manipulation within Uniswap market. Chainlink follows a deviation
-     * threshold parameters and health of each node involded
+     * reducing risk of price manipulation within onchain market.
      * Operation: COMP_PRICE_IN_USD / DAI_PRICE_IN_USD
      */
     function getLatestExchangeRate() public view returns(uint256) {
@@ -199,15 +174,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     }
 
     /*
-     * Provide a signal to the keeper that `tend()` should be called. The keeper will provide
-     * the estimated gas cost that they would pay to call `tend()`, and this function should
-     * use that estimate to make a determination if calling it is "worth it" for the keeper.
-     * This is not the only consideration into issuing this trigger, for example if the position
-     * would be negatively affected if `tend()` is not called shortly, then this can return `true`
-     * even if the keeper might be "at a loss" (keepers are always reimbursed by yEarn)
+     * Provide a signal to the keeper that `tend()` should be called. 
+     * (keepers are always reimbursed by yEarn)
      *
      * NOTE: this call and `harvestTrigger` should never return `true` at the same time.
-     * NOTE: if `tend()` is never intended to be called, it should always return `false`
      */
     function tendTrigger(uint256 gasCost) public override view returns (bool) {
         if(harvestTrigger(0)){
@@ -218,16 +188,12 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         if(getblocksUntilLiquidation() <= blocksToLiquidationDangerZone){
                 return true;
         }
-        
     }
 
     /*
-     * Provide a signal to the keeper that `harvest()` should be called. The keeper will provide
-     * the estimated gas cost that they would pay to call `harvest()`, and this function should
-     * use that estimate to make a determination if calling it is "worth it" for the keeper.
-     * This is not the only consideration into issuing this trigger, for example if the position
-     * would be negatively affected if `harvest()` is not called shortly, then this can return `true`
-     * even if the keeper might be "at a loss" (keepers are always reimbursed by yEarn)
+     * Provide a signal to the keeper that `harvest()` should be called.
+     * gasCost is expected_gas_use * gas_price 
+     * (keepers are always reimbursed by yEarn)
      *
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
@@ -259,10 +225,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     //Calculate how many blocks until we are in liquidation based on current interest rates
     //WARNING does not include compounding so the estimate becomes more innacurate the further ahead we look
-    //equation. Compound doesn't include compounding for most blocks so it is more accurate than you'd think
+    //equation. Compound doesn't include compounding for most blocks
     //((deposits*colateralThreshold - borrows) / (borrows*borrowrate - deposits*colateralThreshold*interestrate));
     function getblocksUntilLiquidation() public view returns (uint256 blocks){
-
         
         (, uint collateralFactorMantissa,) = compound.markets(address(cDAI));
         
@@ -278,7 +243,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         uint denom1 = borrows.mul(borrrowRate);
         uint denom2 =  collateralisedDeposit.mul(supplyRate);
       
-        //we should never be in liquidation
         if(denom2 >= denom1 ){
             blocks = uint256(-1);
         }else{
@@ -291,21 +255,19 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     // This function makes a prediction on how much comp is accrued
     // It is not 100% accurate as it uses current balances in Compound to predict into the past
-    // A completey accurate number requires state changing calls
     function predictCompAccrued() public view returns (uint) {
         
         (uint256 deposits, uint256 borrows) = getCurrentPosition();
         if(deposits == 0){
             return 0; // should be impossible to have 0 balance and positive comp accrued
         }
-
-        //how much comp is being rewarded per block to DAI lenders and borrowers
+        
         //comp speed is amount to borrow or deposit (so half the total distribution for dai)
         uint256 distributionPerBlock = compound.compSpeeds(address(cDAI));
 
         uint256 totalBorrow = cDAI.totalBorrows();
 
-        //total supply needs to be echanged to underlying usine exchange rate
+        //total supply needs to be echanged to underlying using exchange rate
         uint256 totalSupplyCtoken = cDAI.totalSupply();
         uint256 totalSupply = totalSupplyCtoken.mul(cDAI.exchangeRateStored()).div(1e18);
 
@@ -316,15 +278,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         uint256 blockShare = blockShareSupply.add(blockShareBorrow);
       
         //last time we ran harvest
-       
         uint256 lastReport = vault.strategies(address(this)).lastSync;
         return (block.number.sub(lastReport)).mul(blockShare);
-
     }
     
     //Returns the current position
-    //WARNING - this returns just the balance at last time someone touched the cDAI token. Does not accrue interst inbetween
-    //cDAI is very active so not normally an issue. Shows up more in testing than production
+    //WARNING - this returns just the balance at last time someone touched the cDAI token. Does not accrue interst in between
+    //cDAI is very active so not normally an issue.
     function getCurrentPosition() public view returns (uint deposits, uint borrows) {
 
         (, uint ctokenBalance, uint borrowBalance, uint exchangeRate) = cDAI.getAccountSnapshot(address(this));
@@ -337,7 +297,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     function getLivePosition() public returns (uint deposits, uint borrows) {
         deposits = cDAI.balanceOfUnderlying(address(this));
 
-        //we can use non state changing borrowBalanceStored because we updated state with balanceOfUnderlying call
+        //we can use non state changing now because we updated state with balanceOfUnderlying call
         borrows = cDAI.borrowBalanceStored(address(this));
     }
 
@@ -350,19 +310,10 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     /***********
     * internal core logic
-    *********** */
-    
+    *********** */  
     /*
-     * Perform any strategy unwinding or other calls necessary to capture
-     * the "free return" this strategy has generated since the last time it's
-     * core position(s) were adusted. Examples include unwrapping extra rewards.
-     * This call is only used during "normal operation" of a Strategy, and should
-     * be optimized to minimize losses as much as possible. It is okay to report
-     * "no returns", however this will affect the credit limit extended to the
-     * strategy and reduce it's overall position if lower than expected returns
-     * are sustained for long periods of time.
-     *
      * A core method. 
+     * Called at beggining of harvest before providing report to owner
      * 1 - claim accrued comp
      * 2 - if enough to be worth it we sell
      * 3 - because we lose money on our loans we need to offset profit from comp. 
@@ -403,19 +354,14 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     }
 
     /*
-     * Perform any adjustments to the core position(s) of this strategy given
-     * what change the Vault made in the "investable capital" available to the
-     * strategy. Note that all "free capital" in the strategy after the report
-     * was made is available for reinvestment. Also note that this number could
-     * be 0, and you should handle that scenario accordingly.
+     * Second core function. Happens after report call.
      *
      * Similar to deposit function from V1 strategy
-     *
      */
 
     function adjustPosition() internal override {
 
-        //if emergency exit is true then we have already exited as much as possible in first part of harvest
+        //emergency exit is dealt with in prepareReturn
         if(emergencyExit){
             return;
         }
@@ -567,16 +513,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             deficit = false;
             position = desiredBorrow - borrows;
         }
-
-        //checks to see if we have maths problems. Leaving in comments incase you want to check my maths
-        /*uint AmountNeeded = desiredBorrow.mul(1e18).div(collateralTarget);
-        require(AmountNeeded < deposits.add(position).add(want.balanceOf(address(this))), "maths prob");
-
-         uint collat = uint(1e18).mul(desiredBorrow).div(deposits.add(position).add(want.balanceOf(address(this))));
-        require(collat <= collateralTarget , "maths prob2");
-        
-        require(desiredBorrow == position.add(borrows), "maths prob3");*/
-
     }
 
     /*
@@ -606,12 +542,12 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         compound.claimComp(address(this), tokens);
     }
 
+    //sell comp function
     function _disposeOfComp() internal {
 
         uint256 _comp = IERC20(comp).balanceOf(address(this));
         
         if (_comp > minCompToSell) {
-
 
             address[] memory path = new address[](3);
             path[0] = comp;
@@ -619,17 +555,12 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             path[2] = DAI;
 
             IUniswapV2Router02(uniswapRouter).swapExactTokensForTokens(_comp, uint256(0), path, address(this), now);
-
         }
     }
 
-
     /*
      * Make as much capital as possible "free" for the Vault to take. Some slippage
-     * is allowed, since when this method is called the strategist is no longer receiving
-     * their performance fee. The goal is for the strategy to divest as quickly as possible
-     * while not suffering exorbitant losses. This function is used during emergency exit
-     * instead of `prepareReturn()`
+     * is allowed. 
      */
     function exitPosition() internal override {
 
@@ -645,16 +576,16 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
        
         (, , uint borrowBalance,) = cDAI.getAccountSnapshot(address(this));
 
-        require(borrowBalance ==0, "DELEVERAGE_FIRST");// dev: not ready to migrate. deleverage first
+        require(borrowBalance ==0, "DELEVERAGE_FIRST");
 
         want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
 
         cDAI.transfer(_newStrategy, cDAI.balanceOf(address(this)));
+        
+        IERC20 _comp = IERC20(comp);
+        _comp.safeTransfer(_newStrategy, _comp.balanceOf(address(this)));
 
     }
-
-
-
 
     //Three functions covering normal leverage and deleverage situations
     // max is the max amount we want to increase our borrowed balance
@@ -676,7 +607,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
            amount = _normalLeverage(max, lent, borrowed, collateralFactorMantissa);
         }
 
-        
         emit Leverage(max, amount, deficit,  address(0));
     }
 
@@ -716,6 +646,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     }
 
+    //called by flash loan
     function _loanLogic(bool deficit, uint256 amount, uint256 repayAmount) internal {
         //if in deficit we repay amount and then withdraw
         if(deficit) {
@@ -737,16 +668,13 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
         }
     }
 
-
-    //needs to be overriden but can't do currently
-    /*
    function protectedTokens() internal override view returns (address[] memory) {
-        address[] memory protected = new address[](2);
+        address[] memory protected = new address[](3);
         protected[0] = address(want);
         protected[1] = comp;
+        protected[2] = address(cDAI);
         return protected;
-    }*/
-
+    }
 
     /******************
     * Flash loan stuff
@@ -756,11 +684,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     // amount desired is how much we are willing for position to change
     function doDyDxFlashLoan(bool deficit, uint256 amountDesired) internal returns (uint256) {
         uint borrowbefore = cDAI.borrowBalanceCurrent(address(this));
-        
 
         uint amount = amountDesired;
         ISoloMargin solo = ISoloMargin(SOLO);
-
         uint256 marketId = _getMarketIdFromTokenAddress(SOLO, address(want));
 
         // Not enough DAI in DyDx. So we take all we can
@@ -794,13 +720,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         emit Leverage(amountDesired, amount, deficit, SOLO);
 
-        ( , uint256 borrowAfter) = getCurrentPosition();
-        if(deficit){
-            require(borrowbefore == borrowAfter.add(amount), "deficit wrong");
-        }else{
-            require(borrowbefore == borrowAfter.sub(repayAmount), "increase wrong");
-        }
-
         return amount;
      }
 
@@ -811,7 +730,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             return 0;
         }
          collat = uint(1e18).mul(borrow).div(lend);
-
      }
 
     //DyDx calls this function after doing flash loan
