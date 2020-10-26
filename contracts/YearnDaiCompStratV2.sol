@@ -414,9 +414,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
         (uint256 position, bool deficit) = _calculateDesiredPosition(_amount, false);
 
-        //We see how much we withdrew by doing a snapshot now and at end
-        uint256 _before = want.balanceOf(address(this));
-
         //If there is no deficit we dont need to adjust position
         if(deficit){
 
@@ -441,7 +438,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
                 //A limit set so we don't run out of gas
                 if(i >= 5){
-                    notAll= false;
+                    notAll= true;
                     break;
                }
             }
@@ -683,7 +680,6 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     // Flash loan DXDY
     // amount desired is how much we are willing for position to change
     function doDyDxFlashLoan(bool deficit, uint256 amountDesired) internal returns (uint256) {
-        uint borrowbefore = cDAI.borrowBalanceCurrent(address(this));
 
         uint amount = amountDesired;
         ISoloMargin solo = ISoloMargin(SOLO);
