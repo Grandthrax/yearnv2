@@ -7,11 +7,11 @@ def dai(interface):
 
 @pytest.fixture
 def live_vault(Vault):
-    yield Vault.at('0xc2cFcfa978a7fae529DC7E9Aa3CDBE7A727452Bc')
+    yield Vault.at('0x9B142C2CDAb89941E9dcd0B6C1cf6dEa378A8D7C')
 
 @pytest.fixture
 def live_strategy(YearnDaiCompStratV2):
-    yield YearnDaiCompStratV2.at('0xEb1E2e30944797232C623498c546565a085B0623')
+    yield YearnDaiCompStratV2.at('0x5b62F24581Ea4bc6d6C5C101DD2Ae7233E422884')
 
 @pytest.fixture
 def dai(interface):

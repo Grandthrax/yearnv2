@@ -6,8 +6,8 @@ from eth_utils import is_checksum_address
 
 def main():
     dai = interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
-    strategy = YearnDaiCompStratV2.at('0xEb1E2e30944797232C623498c546565a085B0623')
-    vault =  Vault.at('0xc2cFcfa978a7fae529DC7E9Aa3CDBE7A727452Bc')
+    strategy = YearnDaiCompStratV2.at('0x5b62F24581Ea4bc6d6C5C101DD2Ae7233E422884')
+    vault =  Vault.at('0x9B142C2CDAb89941E9dcd0B6C1cf6dEa378A8D7C')
 
     print(f'strategy YearnDaiCompStratV2: {strategy.address}')
     print(f'Vault: {vault.address}')
@@ -32,27 +32,27 @@ def main():
     if input(f"Set deposit limit to: {deposit_limit_eth}?").lower() != "y":
         return
 
-    vault.setDepositLimit(deposit_limit, {"from": dev, 'gas_price':Wei("22 gwei")})
+    vault.setDepositLimit(deposit_limit, {"from": dev, 'gas_price':Wei("17 gwei")})
 
     if input(f"Add strategy: {strategy} ?").lower() != "y":
         return
     
-    vault.addStrategy(strategy, deposit_limit, deposit_limit, 50, {"from": dev, 'gas_price':Wei("22 gwei")})
+    vault.addStrategy(strategy, deposit_limit, deposit_limit, 50, {"from": dev, 'gas_price':Wei("17 gwei")})
 
     amount = Wei('500 ether')
     amountE = amount.to('ether')
     
     if input(f"approve: {amountE} DAI?").lower() != "y":
         return
-    dai.approve(vault, amount*100, {"from": dev, 'gas_price':Wei("22 gwei")})
+    dai.approve(vault, amount*100, {"from": dev, 'gas_price':Wei("17 gwei")})
     
     print('deposit amount:', amount.to('ether'))
     if input("Continue? y/[N]: ").lower() != "y":
         return
-    vault.deposit(amount, {"from": dev, 'gas_price':Wei("19 gwei")})    
+    vault.deposit(amount, {"from": dev, 'gas_price':Wei("17 gwei")})    
 
     print('harvest time')
     if input("Continue? y/[N]: ").lower() != "y":
         return
    
-    strategy.harvest({"from": dev, 'gas_price':Wei("17 gwei")})
+    strategy.harvest({"from": dev, 'gas_price':Wei("16 gwei")})
