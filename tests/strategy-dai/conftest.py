@@ -11,11 +11,17 @@ def live_vault(Vault):
 
 @pytest.fixture
 def live_strategy(YearnDaiCompStratV2):
-    yield YearnDaiCompStratV2.at('0x5b62F24581Ea4bc6d6C5C101DD2Ae7233E422884')
+    yield YearnDaiCompStratV2.at('0x4C6e9d7E5d69429100Fcc8afB25Ea980065e2773')
 
 @pytest.fixture
 def dai(interface):
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+
+#uniwethwbtc
+@pytest.fixture
+def uni_wethwbtc(interface):
+    yield interface.ERC20('0xBb2b8038a1640196FbE3e38816F3e67Cba72D940')
+
 
 @pytest.fixture
 def samdev(accounts):
@@ -41,6 +47,13 @@ def gov(accounts):
 def whale(accounts, history, web3):
     acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     yield acc
+
+#uniswap weth/wbtc
+@pytest.fixture
+def whaleU(accounts, history, web3):
+    acc = accounts.at('0xf2d373481e1da4a8ca4734b28f5a642d55fda7d3', force=True)
+    yield acc
+    
 
 @pytest.fixture
 def strategist(accounts, whale, dai):
