@@ -3,7 +3,11 @@ from brownie import Wei, reverts
 from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest,assertCollateralRatio
 import brownie
 
-def test_emergency_exit(web3,strategy, vault, chain, dai,cdai, gov, comp):
+def test_emergency_exit(web3,strategy, vault, whale, chain, dai,cdai, gov, comp):
+
+    amount1 = Wei('5000 ether')
+    deposit(amount1, whale, dai, vault)
+
     amount1 = Wei('500 ether')
     deposit(amount1, gov, dai, vault)
 
