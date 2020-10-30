@@ -1,7 +1,6 @@
 pragma solidity >=0.5.7;
 pragma experimental ABIEncoderV2;
 
-
 library Account {
     enum Status {Normal, Liquid, Vapor}
     struct Info {
@@ -13,7 +12,6 @@ library Account {
         Status status;
     }
 }
-
 
 library Actions {
     enum ActionType {
@@ -115,13 +113,11 @@ library Actions {
     }
 }
 
-
 library Decimal {
     struct D256 {
         uint256 value;
     }
 }
-
 
 library Interest {
     struct Rate {
@@ -135,7 +131,6 @@ library Interest {
     }
 }
 
-
 library Monetary {
     struct Price {
         uint256 value;
@@ -144,7 +139,6 @@ library Monetary {
         uint256 value;
     }
 }
-
 
 library Storage {
     // All information necessary for tracking a market
@@ -209,7 +203,6 @@ library Storage {
     }
 }
 
-
 library Types {
     enum AssetDenomination {
         Wei, // the amount is denominated in wei
@@ -244,82 +237,47 @@ library Types {
     }
 }
 
-
 interface ISoloMargin {
     struct OperatorArg {
         address operator1;
         bool trusted;
     }
 
-    function ownerSetSpreadPremium(
-        uint256 marketId,
-        Decimal.D256 memory spreadPremium
-    ) external;
+    function ownerSetSpreadPremium(uint256 marketId, Decimal.D256 memory spreadPremium) external;
 
     function getIsGlobalOperator(address operator1) external view returns (bool);
 
-    function getMarketTokenAddress(uint256 marketId)
-        external
-        view
-        returns (address);
+    function getMarketTokenAddress(uint256 marketId) external view returns (address);
 
-    function ownerSetInterestSetter(uint256 marketId, address interestSetter)
-        external;
+    function ownerSetInterestSetter(uint256 marketId, address interestSetter) external;
 
-    function getAccountValues(Account.Info memory account)
-        external
-        view
-        returns (Monetary.Value memory, Monetary.Value memory);
+    function getAccountValues(Account.Info memory account) external view returns (Monetary.Value memory, Monetary.Value memory);
 
-    function getMarketPriceOracle(uint256 marketId)
-        external
-        view
-        returns (address);
+    function getMarketPriceOracle(uint256 marketId) external view returns (address);
 
-    function getMarketInterestSetter(uint256 marketId)
-        external
-        view
-        returns (address);
+    function getMarketInterestSetter(uint256 marketId) external view returns (address);
 
-    function getMarketSpreadPremium(uint256 marketId)
-        external
-        view
-        returns (Decimal.D256 memory);
+    function getMarketSpreadPremium(uint256 marketId) external view returns (Decimal.D256 memory);
 
     function getNumMarkets() external view returns (uint256);
 
-    function ownerWithdrawUnsupportedTokens(address token, address recipient)
-        external
-        returns (uint256);
+    function ownerWithdrawUnsupportedTokens(address token, address recipient) external returns (uint256);
 
-    function ownerSetMinBorrowedValue(Monetary.Value memory minBorrowedValue)
-        external;
+    function ownerSetMinBorrowedValue(Monetary.Value memory minBorrowedValue) external;
 
     function ownerSetLiquidationSpread(Decimal.D256 memory spread) external;
 
     function ownerSetEarningsRate(Decimal.D256 memory earningsRate) external;
 
-    function getIsLocalOperator(address owner, address operator1)
-        external
-        view
-        returns (bool);
+    function getIsLocalOperator(address owner, address operator1) external view returns (bool);
 
-    function getAccountPar(Account.Info memory account, uint256 marketId)
-        external
-        view
-        returns (Types.Par memory);
+    function getAccountPar(Account.Info memory account, uint256 marketId) external view returns (Types.Par memory);
 
-    function ownerSetMarginPremium(
-        uint256 marketId,
-        Decimal.D256 memory marginPremium
-    ) external;
+    function ownerSetMarginPremium(uint256 marketId, Decimal.D256 memory marginPremium) external;
 
     function getMarginRatio() external view returns (Decimal.D256 memory);
 
-    function getMarketCurrentIndex(uint256 marketId)
-        external
-        view
-        returns (Interest.Index memory);
+    function getMarketCurrentIndex(uint256 marketId) external view returns (Interest.Index memory);
 
     function getMarketIsClosing(uint256 marketId) external view returns (bool);
 
@@ -328,7 +286,11 @@ interface ISoloMargin {
     function getAccountBalances(Account.Info memory account)
         external
         view
-        returns (address[] memory, Types.Par[] memory, Types.Wei[] memory);
+        returns (
+            address[] memory,
+            Types.Par[] memory,
+            Types.Wei[] memory
+        );
 
     function renounceOwnership() external;
 
@@ -342,9 +304,7 @@ interface ISoloMargin {
 
     function isOwner() external view returns (bool);
 
-    function ownerWithdrawExcessTokens(uint256 marketId, address recipient)
-        external
-        returns (uint256);
+    function ownerWithdrawExcessTokens(uint256 marketId, address recipient) external returns (uint256);
 
     function ownerAddMarket(
         address token,
@@ -354,10 +314,7 @@ interface ISoloMargin {
         Decimal.D256 memory spreadPremium
     ) external;
 
-    function operate(
-        Account.Info[] memory accounts,
-        Actions.ActionArgs[] memory actions
-    ) external;
+    function operate(Account.Info[] memory accounts, Actions.ActionArgs[] memory actions) external;
 
     function getMarketWithInfo(uint256 marketId)
         external
@@ -373,35 +330,17 @@ interface ISoloMargin {
 
     function getLiquidationSpread() external view returns (Decimal.D256 memory);
 
-    function getAccountWei(Account.Info memory account, uint256 marketId)
-        external
-        view
-        returns (Types.Wei memory);
+    function getAccountWei(Account.Info memory account, uint256 marketId) external view returns (Types.Wei memory);
 
-    function getMarketTotalPar(uint256 marketId)
-        external
-        view
-        returns (Types.TotalPar memory);
+    function getMarketTotalPar(uint256 marketId) external view returns (Types.TotalPar memory);
 
-    function getLiquidationSpreadForPair(
-        uint256 heldMarketId,
-        uint256 owedMarketId
-    ) external view returns (Decimal.D256 memory);
+    function getLiquidationSpreadForPair(uint256 heldMarketId, uint256 owedMarketId) external view returns (Decimal.D256 memory);
 
-    function getNumExcessTokens(uint256 marketId)
-        external
-        view
-        returns (Types.Wei memory);
+    function getNumExcessTokens(uint256 marketId) external view returns (Types.Wei memory);
 
-    function getMarketCachedIndex(uint256 marketId)
-        external
-        view
-        returns (Interest.Index memory);
+    function getMarketCachedIndex(uint256 marketId) external view returns (Interest.Index memory);
 
-    function getAccountStatus(Account.Info memory account)
-        external
-        view
-        returns (uint8);
+    function getAccountStatus(Account.Info memory account) external view returns (uint8);
 
     function getEarningsRate() external view returns (Decimal.D256 memory);
 
@@ -409,10 +348,7 @@ interface ISoloMargin {
 
     function getRiskLimits() external view returns (Storage.RiskLimits memory);
 
-    function getMarket(uint256 marketId)
-        external
-        view
-        returns (Storage.Market memory);
+    function getMarket(uint256 marketId) external view returns (Storage.Market memory);
 
     function ownerSetIsClosing(uint256 marketId, bool isClosing) external;
 
@@ -420,18 +356,9 @@ interface ISoloMargin {
 
     function transferOwnership(address newOwner) external;
 
-    function getAdjustedAccountValues(Account.Info memory account)
-        external
-        view
-        returns (Monetary.Value memory, Monetary.Value memory);
+    function getAdjustedAccountValues(Account.Info memory account) external view returns (Monetary.Value memory, Monetary.Value memory);
 
-    function getMarketMarginPremium(uint256 marketId)
-        external
-        view
-        returns (Decimal.D256 memory);
+    function getMarketMarginPremium(uint256 marketId) external view returns (Decimal.D256 memory);
 
-    function getMarketInterestRate(uint256 marketId)
-        external
-        view
-        returns (Interest.Rate memory);
+    function getMarketInterestRate(uint256 marketId) external view returns (Interest.Rate memory);
 }

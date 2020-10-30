@@ -7,11 +7,7 @@ contract DydxFlashloanBase {
 
     // -- Internal Helper functions -- //
 
-    function _getMarketIdFromTokenAddress(address _solo, address token)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getMarketIdFromTokenAddress(address _solo, address token) internal view returns (uint256) {
         ISoloMargin solo = ISoloMargin(_solo);
 
         uint256 numMarkets = solo.getNumMarkets();
@@ -28,11 +24,7 @@ contract DydxFlashloanBase {
         revert("No marketId found for provided token");
     }
 
-    function _getRepaymentAmountInternal(uint256 amount)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getRepaymentAmountInternal(uint256 amount) internal view returns (uint256) {
         // Needs to be overcollateralize
         // Needs to provide +2 wei to be safe
         return amount.add(2);
@@ -42,11 +34,7 @@ contract DydxFlashloanBase {
         return Account.Info({owner: address(this), number: 1});
     }
 
-    function _getWithdrawAction(uint marketId, uint256 amount)
-        internal
-        view
-        returns (Actions.ActionArgs memory)
-    {
+    function _getWithdrawAction(uint256 marketId, uint256 amount) internal view returns (Actions.ActionArgs memory) {
         return
             Actions.ActionArgs({
                 actionType: Actions.ActionType.Withdraw,
@@ -65,21 +53,12 @@ contract DydxFlashloanBase {
             });
     }
 
-    function _getCallAction(bytes memory data)
-        internal
-        view
-        returns (Actions.ActionArgs memory)
-    {
+    function _getCallAction(bytes memory data) internal view returns (Actions.ActionArgs memory) {
         return
             Actions.ActionArgs({
                 actionType: Actions.ActionType.Call,
                 accountId: 0,
-                amount: Types.AssetAmount({
-                    sign: false,
-                    denomination: Types.AssetDenomination.Wei,
-                    ref: Types.AssetReference.Delta,
-                    value: 0
-                }),
+                amount: Types.AssetAmount({sign: false, denomination: Types.AssetDenomination.Wei, ref: Types.AssetReference.Delta, value: 0}),
                 primaryMarketId: 0,
                 secondaryMarketId: 0,
                 otherAddress: address(this),
@@ -88,11 +67,7 @@ contract DydxFlashloanBase {
             });
     }
 
-    function _getDepositAction(uint marketId, uint256 amount)
-        internal
-        view
-        returns (Actions.ActionArgs memory)
-    {
+    function _getDepositAction(uint256 marketId, uint256 amount) internal view returns (Actions.ActionArgs memory) {
         return
             Actions.ActionArgs({
                 actionType: Actions.ActionType.Deposit,

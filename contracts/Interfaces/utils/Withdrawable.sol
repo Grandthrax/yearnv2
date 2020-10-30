@@ -8,23 +8,19 @@ import "@openzeppelinV3/contracts/access/Ownable.sol";
     Ensures that any contract that inherits from this contract is able to
     withdraw funds that are accidentally received or stuck.
  */
- 
+
 contract Withdrawable is Ownable {
     using SafeERC20 for ERC20;
     address constant ETHER = address(0);
 
-    event LogWithdraw(
-        address indexed _from,
-        address indexed _assetAddress,
-        uint amount
-    );
+    event LogWithdraw(address indexed _from, address indexed _assetAddress, uint256 amount);
 
     /**
      * @dev Withdraw asset.
      * @param _assetAddress Asset to be withdrawn.
      */
     function withdraw(address _assetAddress) public onlyOwner {
-        uint assetBalance;
+        uint256 assetBalance;
         if (_assetAddress == ETHER) {
             address self = address(this); // workaround for a possible solidity bug
             assetBalance = self.balance;
