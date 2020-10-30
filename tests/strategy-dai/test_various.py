@@ -46,7 +46,7 @@ def test_sweep(web3,strategy, dai,cdai, gov, comp):
 
     
 
-def test_apr(web3, chain, comp, vault, enormousrunningstrategy, whale, gov, dai, strategist, isolation):
+def test_apr(web3, chain, comp, vault, enormousrunningstrategy, whale, gov, dai, strategist):
     enormousrunningstrategy.setGasFactor(1, {"from": strategist} )
     assert(enormousrunningstrategy.gasFactor() == 1)
 
@@ -55,7 +55,7 @@ def test_apr(web3, chain, comp, vault, enormousrunningstrategy, whale, gov, dai,
     stateOfStrat(enormousrunningstrategy, dai, comp)
     stateOfVault(vault, enormousrunningstrategy)
 
-    for i in range(100):
+    for i in range(50):
         assert vault.creditAvailable(enormousrunningstrategy) == 0
         waitBlock = 25
         print(f'\n----wait {waitBlock} blocks----')
@@ -79,9 +79,10 @@ def test_apr(web3, chain, comp, vault, enormousrunningstrategy, whale, gov, dai,
         assert time != 0
         apr = (totalReturns/startingBalance) * (blocks_per_year / time)
         print(f'implied apr: {apr:.8%}')
+    vault.withdraw(vault.balanceOf(whale), {'from': whale})
 
 
-def test_profit_is_expected(web3, chain, comp, vault, enormousrunningstrategy, whale, gov, dai, strategist, isolation):
+def test_profit_is_expected(web3, chain, comp, vault, enormousrunningstrategy, whale, gov, dai, strategist):
     enormousrunningstrategy.setGasFactor(1, {"from": strategist} )
     assert(enormousrunningstrategy.gasFactor() == 1)
 
@@ -90,7 +91,7 @@ def test_profit_is_expected(web3, chain, comp, vault, enormousrunningstrategy, w
     stateOfStrat(enormousrunningstrategy, dai, comp)
     stateOfVault(vault, enormousrunningstrategy)
 
-    for i in range(100):
+    for i in range(50):
         assert vault.creditAvailable(enormousrunningstrategy) == 0
         waitBlock = 25
         print(f'\n----wait {waitBlock} blocks----')
@@ -114,6 +115,7 @@ def test_profit_is_expected(web3, chain, comp, vault, enormousrunningstrategy, w
         assert time != 0
         apr = (totalReturns/startingBalance) * (blocks_per_year / time)
         print(f'implied apr: {apr:.8%}')
+    vault.withdraw(vault.balanceOf(whale), {'from': whale})
 
 
 
@@ -154,7 +156,7 @@ def test_getting_too_close_to_liq(web3, chain, comp, vault, largerunningstrategy
 
 def test_profit_is_registered(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai):
 
-    stateOfStrat(largerunningstrategy, dai)
+    stateOfStrat(largerunningstrategy, dai, comp)
     stateOfVault(vault, largerunningstrategy)
     #1m deposit
     amount = Wei('1000000 ether')
@@ -163,14 +165,14 @@ def test_profit_is_registered(web3, chain, comp, vault, largerunningstrategy, wh
 
     #all money in vault
     assert largerunningstrategy.estimatedTotalAssets() > amount*0.99
-    stateOfStrat(largerunningstrategy, dai)
+    stateOfStrat(largerunningstrategy, dai, comp)
     stateOfVault(vault, largerunningstrategy)
 
     sample = 500
 
     wait(sample, chain)
     harvest(largerunningstrategy, gov)
-    stateOfStrat(largerunningstrategy, dai)
+    stateOfStrat(largerunningstrategy, dai, comp)
     stateOfVault(vault, largerunningstrategy)
 
     debt = vault.strategies(largerunningstrategy)[5]

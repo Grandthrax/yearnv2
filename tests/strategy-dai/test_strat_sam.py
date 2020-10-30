@@ -23,7 +23,7 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
     assert strategy.strategist() == strategist_and_keeper
     assert strategy.keeper() == strategist_and_keeper
     assert strategy.want() == vault.token()
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     
     # Add strategy to the Vault
     assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0]
@@ -63,7 +63,7 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
 
     amount = Wei('100000 ether')
     deposit(amount,whale, dai, vault )
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
 
 
@@ -72,7 +72,7 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
     harvest(strategy, strategist_and_keeper)
 
    # assert( !strategy.harvestTrigger(0, {'from': strategist_and_keeper}))
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
 
 
@@ -80,12 +80,12 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
 
     amount = Wei('320000 ether')
     deposit(amount,whale, dai, vault )
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
     
     harvest(strategy, strategist_and_keeper)
 
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
 
     # Claim COMP and check balance in strategy -> for testing _claimComp() needs to be public
@@ -98,7 +98,7 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
     #harvest(strategy, strategist_and_keeper)
 
 
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
 
     #withdraw(1, strategy, whale, dai, vault)
@@ -113,12 +113,12 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
     #print('Emergency Exit')
     #strategy.setEmergencyExit({"from": gov})
 
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
 
     harvest(strategy, strategist_and_keeper)
 
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
 
     ##test migration
@@ -127,26 +127,26 @@ def test_strat_sam(accounts, interface, web3, chain,vault, comp, whale, YearnDai
     vault.migrateStrategy(strategy,strategy2,  {"from": gov})
 
     print('old strat')
-    stateOfStrat(strategy,dai)
+    stateOfStrat(strategy,dai, comp)
     stateOfVault(vault,strategy)
 
     print('new strat')
-    stateOfStrat(strategy2,dai)
+    stateOfStrat(strategy2,dai, comp)
     stateOfVault(vault,strategy2)
 
     withdraw(1, whale, dai, vault)
-    stateOfStrat(strategy2,dai)
+    stateOfStrat(strategy2,dai, comp)
     stateOfVault(vault,strategy2)
 
     amount = Wei('320000 ether')
     deposit(amount,whale, dai, vault )
-    stateOfStrat(strategy2,dai)
+    stateOfStrat(strategy2,dai, comp)
     stateOfVault(vault,strategy2)
 
     harvest(strategy2, strategist_and_keeper)
-    stateOfStrat(strategy2,dai)
+    stateOfStrat(strategy2,dai, comp)
     stateOfVault(vault,strategy2)
 
     withdraw(1, whale, dai, vault)
-    stateOfStrat(strategy2,dai)
+    stateOfStrat(strategy2,dai, comp)
     stateOfVault(vault,strategy2)

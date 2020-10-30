@@ -4,12 +4,12 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, h
 import random
 import brownie
 
-def test_full_live(web3,  comp, YearnDaiCompStratV2,live_strategy, live_vault,  dai, samdev):
+def test_migration_live(web3,  comp, YearnDaiCompStratV2,live_strategy, live_vault,  dai, samdev):
     #stateOfStrat(live_strategy, dai, comp)
    # stateOfVault(live_vault, live_strategy)
-    live_strategy = YearnDaiCompStratV2.at('0x4C6e9d7E5d69429100Fcc8afB25Ea980065e2773')
+    old_strategy = YearnDaiCompStratV2.at('0x4C6e9d7E5d69429100Fcc8afB25Ea980065e2773')
 
-    old_strategy = YearnDaiCompStratV2.at('0x5b62F24581Ea4bc6d6C5C101DD2Ae7233E422884')
+    live_strategy = YearnDaiCompStratV2.at('0x5b62F24581Ea4bc6d6C5C101DD2Ae7233E422884')
 
     print(f'strategy YearnDaiCompStratV2: {live_strategy.address}')
 

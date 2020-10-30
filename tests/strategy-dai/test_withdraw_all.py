@@ -4,7 +4,7 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, h
 import brownie
 
 
-def test_leverage_up_and_down(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai, strategist, isolation):
+def test_leverage_up_and_down(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai, strategist):
 
     stateOfStrat(largerunningstrategy, dai, comp)
     stateOfVault(vault, largerunningstrategy)
@@ -49,7 +49,7 @@ def test_leverage_up_and_down(web3, chain, comp, vault, largerunningstrategy, wh
 
 
 
-def test_withdraw_all(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai, strategist, isolation):
+def test_withdraw_all(web3, chain, comp, vault, largerunningstrategy, whale, gov, dai, strategist):
 
     balance_before = dai.balanceOf(strategist)
     stateOfStrat(largerunningstrategy, dai, comp)

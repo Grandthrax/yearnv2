@@ -3,31 +3,14 @@ from brownie import Wei, reverts, network
 import brownie
 import requests
 
+
 def get_gas_price(confirmation_speed: str = "fast"):
     if "mainnet" not in network.show_active():
         return 10 ** 9  # 1 gwei
     data = requests.get("https://www.gasnow.org/api/v3/gas/price").json()
     return data["data"][confirmation_speed]
 
-
-def initialMigrate(strategy,vault, whale, ychad, dai, controller):
-    print('\n----migrating strategy----')
-    controller.approveStrategy(dai, strategy, {'from': ychad})
-    controller.setStrategy(dai, strategy, {'from': ychad})
-    vault.setMin(10000, {'from': ychad})
-    assert controller.strategies(dai) == strategy
-    daiInVault = dai.balanceOf(vault)
-    earn(strategy, vault, ychad)
-    deposit('10000 ether', whale, dai, vault)
-    earn(strategy, vault, ychad)
-
-    assert(dai.balanceOf(vault) == 0, "All money should now be in strat")
-    assert(dai.balanceOf(strategy) == 0, "All money in strat should be invested")
-  
-    deposits, borrows = strategy.getCurrentPosition()
-    assert(borrows > 0, "Should have borrowed some")
-    assert(deposits > 0, "Should have lent some")
-
+#note you can use real gas prices and estimates here but for testing better to hardcode
 def harvest(strategy, keeper, vault):
     # Evaluate gas cost of calling harvest
     #gasprice = get_gas_price()

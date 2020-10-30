@@ -4,7 +4,7 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, h
 import brownie
 import random
 
-def test_unknown_2(web3,StrategyUniswapPairPickle, Vault, interface, chain,uni_wethwbtc, whaleU, accounts):
+def test_unknown_2(web3,StrategyUniswapPairPickle, strategy_generic, Vault, interface, chain,uni_wethwbtc, whaleU, accounts):
     
 
     starting_balance = uni_wethwbtc.balanceOf(whaleU)
@@ -38,7 +38,7 @@ def test_unknown_2(web3,StrategyUniswapPairPickle, Vault, interface, chain,uni_w
         
 
 
-def test_unknown_1(web3,StrategyUniswapPairPickle, Vault, chain,uni_wethwbtc, whaleU, accounts):
+def unknown_1(web3,StrategyUniswapPairPickle, Vault, chain,uni_wethwbtc, whaleU, accounts):
     
     
 

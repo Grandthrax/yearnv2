@@ -1,6 +1,12 @@
 # use Ganache's forked mainnet mode as the default network
 networks:
-  default: mainnet-fork
+  default: SamLocal-Fork
+  SamLocal-Fork:
+    cmd_settings:
+      unlock:
+        - 0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8
+        - 0xC3D6880fD95E06C816cB030fAc45b3ffe3651Cb0
+        - 0xf2d373481e1da4a8ca4734b28f5a642d55fda7d3
   
 # require OpenZepplin Contracts
 dependencies:
