@@ -13,24 +13,49 @@ import "@openzeppelinV3/contracts/math/Math.sol";
 
 interface PickleJar {
     function deposit(uint256 _amount) external;
+
     function withdraw(uint256 _shares) external;
+
     function token() external view returns (address);
+
     function getRatio() external view returns (uint256);
+
     function earn() external;
 }
 
 interface PickleChef {
     function deposit(uint256 _pid, uint256 _amount) external;
+
     function withdraw(uint256 _pid, uint256 _amount) external;
-    function poolInfo(uint256 _pid) external view returns (address, uint256, uint256, uint256);
+
+    function poolInfo(uint256 _pid)
+        external
+        view
+        returns (
+            address,
+            uint256,
+            uint256,
+            uint256
+        );
+
     function pendingPickle(uint256 _pid, address _user) external view returns (uint256);
+
     function userInfo(uint256 _pid, address _user) external view returns (uint256, uint256);
 }
 
 interface UniswapPair {
     function token0() external view returns (address);
+
     function token1() external view returns (address);
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+
+    function getReserves()
+        external
+        view
+        returns (
+            uint112 reserve0,
+            uint112 reserve1,
+            uint32 blockTimestampLast
+        );
 }
 
 interface Uniswap {
@@ -41,19 +66,25 @@ interface Uniswap {
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
-    
+
     function addLiquidity(
         address tokenA,
         address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        uint amountAMin,
-        uint amountBMin,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
         address to,
-        uint deadline
-    ) external returns (uint amountA, uint amountB, uint liquidity);
+        uint256 deadline
+    )
+        external
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        );
 
-    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
+    function getAmountsOut(uint256 amountIn, address[] memory path) external view returns (uint256[] memory amounts);
 }
 
 contract StrategyUniswapPairPickle is BaseStrategy {
@@ -73,12 +104,16 @@ contract StrategyUniswapPairPickle is BaseStrategy {
     uint256 gasFactor = 200;
     uint256 interval = 1000;
 
-    constructor(address _vault, address _jar, uint256 _pid) public BaseStrategy(_vault) {
+    constructor(
+        address _vault,
+        address _jar,
+        uint256 _pid
+    ) public BaseStrategy(_vault) {
         jar = _jar;
         pid = _pid;
 
         require(PickleJar(jar).token() == address(want), "wrong jar");
-        (address lp,,,) = PickleChef(chef).poolInfo(pid);
+        (address lp, , , ) = PickleChef(chef).poolInfo(pid);
         require(lp == jar, "wrong pid");
 
         token0 = UniswapPair(address(want)).token0();
@@ -103,11 +138,9 @@ contract StrategyUniswapPairPickle is BaseStrategy {
         uint256 _amount1 = quote(reward, token1, _earned / 2);
         (uint112 _reserve0, uint112 _reserve1, ) = UniswapPair(address(want)).getReserves();
         uint256 _supply = IERC20(want).totalSupply();
-        return Math.min(
-            _amount0.mul(_supply).div(_reserve0),
-            _amount1.mul(_supply).div(_reserve1)
-        );
+        return Math.min(_amount0.mul(_supply).div(_reserve0), _amount1.mul(_supply).div(_reserve1));
     }
+
     /*
      * Provide an accurate estimate for the total amount of assets (principle + return)
      * that this strategy is currently managing, denominated in terms of `want` tokens.
@@ -147,7 +180,7 @@ contract StrategyUniswapPairPickle is BaseStrategy {
      */
     function prepareReturn() internal override {
         PickleChef(chef).deposit(pid, 0);
-        uint _amount = IERC20(reward).balanceOf(address(this));
+        uint256 _amount = IERC20(reward).balanceOf(address(this));
         if (_amount == 0) return;
         swap(reward, token0, _amount / 2);
         _amount = IERC20(reward).balanceOf(address(this));
@@ -163,7 +196,7 @@ contract StrategyUniswapPairPickle is BaseStrategy {
      * be 0, and you should handle that scenario accordingly.
      */
     function adjustPosition() internal override {
-        uint _amount = want.balanceOf(address(this));
+        uint256 _amount = want.balanceOf(address(this));
         if (_amount == 0) return;
         // stake lp tokens in pickle jar
         PickleJar(jar).deposit(_amount);
@@ -269,13 +302,17 @@ contract StrategyUniswapPairPickle is BaseStrategy {
 
     // Quote want token in ether.
     function wantPrice() public view returns (uint256) {
-        require(token0 == weth || token1 == weth);  // dev: can only quote weth pairs
+        require(token0 == weth || token1 == weth); // dev: can only quote weth pairs
         (uint112 _reserve0, uint112 _reserve1, ) = UniswapPair(address(want)).getReserves();
         uint256 _supply = IERC20(want).totalSupply();
-        return 2e18 * uint256(token0 == weth ? _reserve0 : _reserve1) / _supply;
+        return (2e18 * uint256(token0 == weth ? _reserve0 : _reserve1)) / _supply;
     }
 
-    function quote(address token_in, address token_out, uint256 amount_in) internal view returns (uint256) {
+    function quote(
+        address token_in,
+        address token_out,
+        uint256 amount_in
+    ) internal view returns (uint256) {
         bool is_weth = token_in == weth || token_out == weth;
         address[] memory path = new address[](is_weth ? 2 : 3);
         path[0] = token_in;
@@ -289,7 +326,11 @@ contract StrategyUniswapPairPickle is BaseStrategy {
         return amounts[amounts.length - 1];
     }
 
-    function swap(address token_in, address token_out, uint amount_in) internal {
+    function swap(
+        address token_in,
+        address token_out,
+        uint256 amount_in
+    ) internal {
         bool is_weth = token_in == weth || token_out == weth;
         address[] memory path = new address[](is_weth ? 2 : 3);
         path[0] = token_in;
@@ -299,13 +340,7 @@ contract StrategyUniswapPairPickle is BaseStrategy {
             path[1] = weth;
             path[2] = token_out;
         }
-        Uniswap(uniswap).swapExactTokensForTokens(
-            amount_in,
-            0,
-            path,
-            address(this),
-            block.timestamp
-        );
+        Uniswap(uniswap).swapExactTokensForTokens(amount_in, 0, path, address(this), block.timestamp);
     }
 
     function add_liquidity() internal {
@@ -314,10 +349,10 @@ contract StrategyUniswapPairPickle is BaseStrategy {
             token1,
             IERC20(token0).balanceOf(address(this)),
             IERC20(token1).balanceOf(address(this)),
-            0, 0,
+            0,
+            0,
             address(this),
             block.timestamp
         );
     }
-
 }

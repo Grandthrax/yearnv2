@@ -28,15 +28,15 @@ def main():
     dev = accounts.load(account_name)
     print(f"You are using: 'dev' [{dev.address}]")
     token = Token.at(get_address("ERC20 Token: "))
-    #token = Token.at("0x6B175474E89094C44Da98b954EedeAC495271d0F")
-    #gov = get_address("yEarn Governance: ")
+    # token = Token.at("0x6B175474E89094C44Da98b954EedeAC495271d0F")
+    # gov = get_address("yEarn Governance: ")
     gov = dev
-    #rewards = get_address("Rewards contract: ")
+    # rewards = get_address("Rewards contract: ")
     rewards = dev
-    #name = input(f"Set description ['yearn {token.name()}']: ") or ""
+    # name = input(f"Set description ['yearn {token.name()}']: ") or ""
     name = "yDAI Test Vault V2"
-    #symbol = input(f"Set symbol ['y{token.symbol()}']: ") or ""
-    symbol = 'ytDAI'
+    # symbol = input(f"Set symbol ['y{token.symbol()}']: ") or ""
+    symbol = "ytDAI"
     print(
         f"""
     Vault Parameters
@@ -52,4 +52,6 @@ def main():
     if input("Deploy New Vault? y/[N]: ").lower() != "y":
         return
     print("Deploying Vault...")
-    vault = Vault.deploy(token, gov, rewards, name, symbol,  {'from': dev, 'gas_price':Wei("15 gwei")})
+    vault = Vault.deploy(
+        token, gov, rewards, name, symbol, {"from": dev, "gas_price": Wei("15 gwei")}
+    )

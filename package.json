@@ -10,11 +10,10 @@
         "pretty-quick": "^3.0.2"
     },
     "scripts": {
-        "lint": "pretty-quick --pattern '**/*.*(sol|json)' --verbose",
+        "lint": "prettier --list-different **/*.sol **/*.json",
         "lint:check": "prettier --check **/*.sol **/*.json",
-        "lint:fix": "pretty-quick --pattern '**/*.*(sol|json)' --staged --verbose"
+        "lint:fix": "prettier --write **/*.sol **/*.json"
     },
-    
     "dependencies": {
         "@openzeppelin/contracts": "^3.2.0"
     }
