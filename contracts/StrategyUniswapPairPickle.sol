@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 // These are the core Yearn libraries
-import {BaseStrategy, StrategyParams} from "@yearnvaultsV2/contracts/BaseStrategy.sol";
+import "./BaseStrategy.sol";
 import "@openzeppelinV3/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelinV3/contracts/math/SafeMath.sol";
 import "@openzeppelinV3/contracts/utils/Address.sol";
@@ -16,6 +16,7 @@ interface PickleJar {
     function withdraw(uint256 _shares) external;
     function token() external view returns (address);
     function getRatio() external view returns (uint256);
+    function earn() external;
 }
 
 interface PickleChef {
@@ -70,6 +71,7 @@ contract StrategyUniswapPairPickle is BaseStrategy {
     address token0;
     address token1;
     uint256 gasFactor = 200;
+    uint256 interval = 1000;
 
     constructor(address _vault, address _jar, uint256 _pid) public BaseStrategy(_vault) {
         jar = _jar;
@@ -96,14 +98,14 @@ contract StrategyUniswapPairPickle is BaseStrategy {
      */
     function expectedReturn() public override view returns (uint256 _liquidity) {
         uint256 _earned = PickleChef(chef).pendingPickle(pid, address(this));
-        if (_earned == 0) return 0;
+        if (_earned / 2 == 0) return 0;
         uint256 _amount0 = quote(reward, token0, _earned / 2);
         uint256 _amount1 = quote(reward, token1, _earned / 2);
         (uint112 _reserve0, uint112 _reserve1, ) = UniswapPair(address(want)).getReserves();
         uint256 _supply = IERC20(want).totalSupply();
         return Math.min(
-            _amount0 * _supply / _reserve0,
-            _amount0 * _supply / _reserve0
+            _amount0.mul(_supply).div(_reserve0),
+            _amount1.mul(_supply).div(_reserve1)
         );
     }
     /*
@@ -128,9 +130,9 @@ contract StrategyUniswapPairPickle is BaseStrategy {
         // TODO: Build a more accurate estimate using the value of all positions in terms of `want`
         (uint256 _staked, ) = PickleChef(chef).userInfo(pid, address(this));
         uint256 _ratio = PickleJar(jar).getRatio();
-        uint256 _staked_want = _staked * _ratio / 1e18;
+        uint256 _staked_want = _staked.mul(_ratio).div(1e18);
         uint256 _unrealized_profit = expectedReturn();
-        return want.balanceOf(address(this)) + _staked_want + _unrealized_profit;
+        return want.balanceOf(address(this)).add(_staked_want).add(_unrealized_profit);
     }
 
     /*
@@ -144,7 +146,6 @@ contract StrategyUniswapPairPickle is BaseStrategy {
      * are sustained for long periods of time.
      */
     function prepareReturn() internal override {
-        // TODO: Do stuff here to free up any returns back into `want`
         PickleChef(chef).deposit(pid, 0);
         uint _amount = IERC20(reward).balanceOf(address(this));
         if (_amount == 0) return;
@@ -193,7 +194,7 @@ contract StrategyUniswapPairPickle is BaseStrategy {
     function liquidatePosition(uint256 _amount) internal override {
         // TODO: Do stuff here to free up `_amount` from all positions back into `want`
         (uint256 _staked, ) = PickleChef(chef).userInfo(pid, address(this));
-        uint256 _withdraw = _amount * 1e18 / PickleJar(jar).getRatio();
+        uint256 _withdraw = _amount.mul(1e18).div(PickleJar(jar).getRatio());
         PickleChef(chef).withdraw(pid, _withdraw);
         PickleJar(jar).withdraw(IERC20(jar).balanceOf(address(this)));
     }
@@ -224,14 +225,24 @@ contract StrategyUniswapPairPickle is BaseStrategy {
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
     function harvestTrigger(uint256 gasCost) public override view returns (bool) {
+        uint256 _credit = vault.creditAvailable().mul(wantPrice()).div(1e18);
         uint256 _earned = PickleChef(chef).pendingPickle(pid, address(this));
         uint256 _return = quote(reward, weth, _earned);
-        return _return > gasCost * gasFactor;
+        uint256 last_sync = vault.strategies(address(this)).lastSync;
+        bool time_trigger = block.number.sub(last_sync) >= interval;
+        bool cost_trigger = _return > gasCost.mul(gasFactor);
+        bool credit_trigger = _credit > gasCost.mul(gasFactor);
+        return time_trigger && (cost_trigger || credit_trigger);
     }
 
     function setGasFactor(uint256 _gasFactor) public {
         require(msg.sender == strategist || msg.sender == governance());
         gasFactor = _gasFactor;
+    }
+
+    function setInterval(uint256 _interval) public {
+        require(msg.sender == strategist || msg.sender == governance());
+        interval = _interval;
     }
 
     /*
@@ -247,9 +258,22 @@ contract StrategyUniswapPairPickle is BaseStrategy {
     // NOTE: Override this if you typically manage tokens inside this contract
     //       that you don't want swept away from you randomly.
     //       By default, only contains `want`
-    // function protectedTokens() internal override view returns (address[] memory)
+    function protectedTokens() internal override view returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = address(want);
+        protected[1] = reward;
+        return protected;
+    }
 
     // ******** HELPER METHODS ************
+
+    // Quote want token in ether.
+    function wantPrice() public view returns (uint256) {
+        require(token0 == weth || token1 == weth);  // dev: can only quote weth pairs
+        (uint112 _reserve0, uint112 _reserve1, ) = UniswapPair(address(want)).getReserves();
+        uint256 _supply = IERC20(want).totalSupply();
+        return 2e18 * uint256(token0 == weth ? _reserve0 : _reserve1) / _supply;
+    }
 
     function quote(address token_in, address token_out, uint256 amount_in) internal view returns (uint256) {
         bool is_weth = token_in == weth || token_out == weth;

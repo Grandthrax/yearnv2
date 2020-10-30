@@ -5,7 +5,6 @@ networks:
 # require OpenZepplin Contracts
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.1.0
-  - iearn-finance/yearn-vaults@0.1.1
 
 # path remapping to support OpenZepplin imports with NPM-style path
 compiler:
@@ -14,13 +13,8 @@ compiler:
     remappings:
       - "@openzeppelinV3=OpenZeppelin/openzeppelin-contracts@3.1.0"
       #- "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.1.0"
-      - "@yearnvaultsV2=iearn-finance/yearn-vaults@0.1.1"
-    optimizer:
-      enabled: true
-      runs: 200
+      #- "@yearnvaultsV2=iearn-finance/yearn-vaults@0.1.1"
 
 reports:
   exclude_paths:
     - contracts/test/Token.sol
-  exclude_contracts:
-    - SafeMath
