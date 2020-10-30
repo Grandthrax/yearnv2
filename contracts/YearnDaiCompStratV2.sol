@@ -37,6 +37,8 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     // @notice emitted when trying to do Flash Loan. flashLoan address is 0x00 when no flash loan used
     event Leverage(uint amountRequested, uint amountGiven, bool deficit, address flashLoan);
 
+    string public constant name = "LeveragedDaiCompStrategyV2";
+
     //Flash Loan Providers
     address private constant SOLO = 0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e;
     address private constant AAVE_LENDING = 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8;
@@ -61,9 +63,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     uint256 public collateralTarget = 0.73 ether;  // 73% 
     uint256 public blocksToLiquidationDangerZone = 46500;  // 24 hours =  60*60*24*7/13
 
-    uint256 public minDAI = 100 ether; //Only lend if we have enough DAI to be worth it
+    uint256 public minDAI = 10 ether; //Only lend if we have enough DAI to be worth it
     uint256 public minCompToSell = 0.5 ether; //used both as the threshold to sell but also as a trigger for harvest
-    uint256 public gasFactor = 10; // multiple before triggering harvest
+    uint256 public gasFactor = 50; // multiple before triggering harvest
 
     //To deactivate flash loan provider if needed
     bool public DyDxActive = true;
@@ -71,6 +73,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     constructor(address _vault) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING)
     {
+
         //only accept DAI vault
         require(vault.token() == DAI, "!DAI");
                     
@@ -199,7 +202,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
      */
     function harvestTrigger(uint256 gasCost) public override view returns (bool) {
 
-        if(vault.creditAvailable() > minDAI)
+        
+
+        if(vault.creditAvailable() > minDAI.mul(gasFactor))
         {
             return true;
         }
@@ -650,6 +655,9 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
 
     //called by flash loan
     function _loanLogic(bool deficit, uint256 amount, uint256 repayAmount) internal {
+        uint bal = want.balanceOf(address(this));
+        require(bal >= amount, "FLASH_FAILED"); // to stop malicious calls
+
         //if in deficit we repay amount and then withdraw
         if(deficit) {
            
@@ -660,7 +668,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
             cDAI.redeemUnderlying(repayAmount);
         } else {   
       
-            require(cDAI.mint(want.balanceOf(address(this))) == 0, "mint error");
+            require(cDAI.mint(bal) == 0, "mint error");
 
             //borrow more to cover fee
             // fee is so low for dydx that it does not effect our liquidation risk. 
