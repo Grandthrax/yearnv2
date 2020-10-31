@@ -238,7 +238,7 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         if(liquidity < liquidityCushion){
             toKeep = liquidityCushion.sub(liquidity);
         }
-
+        toKeep = toKeep.add(outstanding);
         //if we have more than enough weth then invest the extra
         if(wethBalance > toKeep){
 
