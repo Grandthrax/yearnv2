@@ -98,7 +98,7 @@ contract YearnWethCreamStratV2 is BaseStrategy {
      */
     function tendTrigger(uint256 gasCost) public override view returns (bool) {
         gasCost; // silence UI warning
-        if (harvestTrigger(0)) {
+        if (harvestTrigger(gasCost)) {
             //harvest takes priority
             return false;
         }
@@ -108,6 +108,8 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         if (cashAvailable <= liquidityCushion && cashAvailable > dustThreshold && underlyingBalanceStored() > dustThreshold) {
             return true;
         }
+
+        return false;
     }
 
     function underlyingBalanceStored() public view returns (uint256 balance){
