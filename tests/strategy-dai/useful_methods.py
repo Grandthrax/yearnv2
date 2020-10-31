@@ -73,8 +73,8 @@ def genericStateOfStrat(strategy, currency, vault):
     totalReturns = strState[6].to('ether')
     print(f'Total Strategy Debt: {totalDebt:.5f}')
     print(f'Total Strategy Returns: {totalReturns:.5f}')
-    print('Outstanding:', strategy.outstanding()) 
-    print('Reserves:', strategy.reserve()) 
+    print('Outstanding:', strategy.outstanding().to('ether')) 
+    print('Reserves:', strategy.reserve().to('ether')) 
     print('Harvest Trigger:', strategy.harvestTrigger(1000000 * 30 * 1e9)) 
     print('Tend Trigger:', strategy.tendTrigger(1000000 * 30 *1e9)) #1m gas at 30 gwei
     print('Emergency Exit:', strategy.emergencyExit()) 
