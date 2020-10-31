@@ -179,19 +179,32 @@ contract YearnWethCreamStratV2 is BaseStrategy {
 
         if(total > debt){
             uint profit = total-debt;
+            uint amountToFree = profit.add(outstanding);
 
             //we need to add outstanding to our profit
-            if(balanceInWeth >= profit.add(outstanding)){
-                
+            if(balanceInWeth >= amountToFree){
+                reserve = weth.balanceOf(address(this)) - amountToFree;
             }else{
                 //change profit to what we can withdraw
-                profit = _withdrawSome(profit.sub(balanceInWeth).add(outstanding));
-            }
+                _withdrawSome(amountToFree.sub(balanceInWeth));
+                balanceInWeth = weth.balanceOf(address(this));
 
-            reserve = weth.balanceOf(address(this)).sub(profit);
+                if(balanceInWeth > amountToFree){
+                    reserve = balanceInWeth - amountToFree;
+                }else{
+                    reserve = 0;
+                }
+
+                
+            }
             
         }else{
-            reserve = weth.balanceOf(address(this));
+            uint256 bal = weth.balanceOf(address(this));
+            if(bal <= outstanding){
+                    reserve = 0;
+            }else{
+                reserve = bal - outstanding;
+            }
         }
 
         

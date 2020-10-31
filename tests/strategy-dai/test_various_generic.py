@@ -4,6 +4,49 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, g
 import random
 import brownie
 
+def test_emergency_exit_generic(strategy_changeable, web3, chain, Vault,currency, whale, strategist):
+    gov = strategist
+    vault = strategist.deploy(
+        Vault, currency, strategist, strategist, "TestVault", "Amount"
+    )
+    deposit_limit = Wei('1000000 ether')
+    #set limit to the vault
+    vault.setDepositLimit(deposit_limit, {"from": strategist})
+
+    #deploy strategy
+    strategy = strategist.deploy(strategy_changeable, vault)
+
+    vault.addStrategy(strategy, deposit_limit, deposit_limit, 50, {"from": strategist})
+
+
+    amount1 = Wei('500 ether')
+    deposit(amount1, whale, currency, vault)
+
+    amount1 = Wei('50 ether')
+    deposit(amount1, gov, currency, vault)
+
+    strategy.harvest({'from': gov})
+    wait(30, chain)
+
+    assert vault.emergencyShutdown() == False
+
+    vault.setEmergencyShutdown(True, {"from": gov})
+    assert vault.emergencyShutdown()
+
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+    strategy.harvest({'from': gov})
+    strategy.harvest({'from': gov})
+    print('\n Emergency shut down + harvest done')
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
+    print('\n Withdraw All')
+    vault.withdraw(vault.balanceOf(gov), {'from': gov})
+
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
 def test_apr_generic(strategy_changeable, web3, chain, Vault,currency, whale, strategist):
 
     vault = strategist.deploy(
@@ -28,13 +71,13 @@ def test_apr_generic(strategy_changeable, web3, chain, Vault,currency, whale, st
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
 
-    for i in range(50):
+    for i in range(5):
         waitBlock = 25
         print(f'\n----wait {waitBlock} blocks----')
         chain.mine(waitBlock)
         print(f'\n----harvest----')
         strategy.harvest({'from': strategist})
-        
+
         genericStateOfStrat(strategy, currency, vault)
         genericStateOfVault(vault, currency)
 
@@ -55,3 +98,45 @@ def test_apr_generic(strategy_changeable, web3, chain, Vault,currency, whale, st
         print(f'implied apr: {apr:.8%}')
 
     vault.withdraw(vault.balanceOf(whale), {'from': whale})
+
+def test_emergency_exit_generic(strategy_changeable, web3, chain, Vault,currency, whale, strategist):
+    gov = strategist
+    vault = strategist.deploy(
+        Vault, currency, strategist, strategist, "TestVault", "Amount"
+    )
+    deposit_limit = Wei('1000000 ether')
+    #set limit to the vault
+    vault.setDepositLimit(deposit_limit, {"from": strategist})
+
+    #deploy strategy
+    strategy = strategist.deploy(strategy_changeable, vault)
+
+    vault.addStrategy(strategy, deposit_limit, deposit_limit, 50, {"from": strategist})
+
+
+    amount1 = Wei('500 ether')
+    deposit(amount1, whale, currency, vault)
+
+    amount1 = Wei('50 ether')
+    deposit(amount1, gov, currency, vault)
+
+    strategy.harvest({'from': gov})
+    wait(30, chain)
+
+    assert vault.emergencyShutdown() == False
+
+    vault.setEmergencyShutdown(True, {"from": gov})
+    assert vault.emergencyShutdown()
+
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+    strategy.harvest({'from': gov})
+    print('\n Emergency shut down + harvest done')
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
+    print('\n Withdraw All')
+    vault.withdraw(vault.balanceOf(gov), {'from': gov})
+
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
