@@ -25,6 +25,7 @@ import "./BaseStrategy.sol";
 /********************
  *   A simple Comp farming strategy from leveraged lending of DAI.
  *   Uses Flash Loan to leverage up quicker. But not neccessary for operation
+ *   Made by SamPriestley.com
  *   https://github.com/Grandthrax/yearnv2/blob/master/contracts/YearnDaiCompStratV2.sol
  *
  ********************* */
