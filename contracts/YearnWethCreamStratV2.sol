@@ -17,7 +17,6 @@ import "./BaseStrategy.sol";
 
 /********************
  *   An ETH Cream strategy with a liquidity buffer to ensure we don't end up in crisis.
- *   Uses Flash Loan to leverage up quicker. But not neccessary for operation
  *   Made by SamPriestley.com
  *   https://github.com/Grandthrax/yearnv2/blob/master/contracts/YearnWethCreamStratV2.sol
  *
@@ -35,12 +34,13 @@ contract YearnWethCreamStratV2 is BaseStrategy {
 
     IWETH public constant weth = IWETH(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
 
-    uint256 public maxReportDelay = 6300; // once a day
+    uint256 public maxReportDelay = 50; //6300 is once a day. lower vaule used for testing
 
     //Operating variables
-    uint256 public liquidityCushion = 300000 ether; // 300000 ether
+    uint256 public liquidityCushion = 3000 ether; // 3000 ether ~ 1m usd
 
     uint256 public profitFactor = 50; // multiple before triggering harvest
+    uint256 public dustThreshold = 0.01 ether; // multiple before triggering harvest
 
 
     constructor(address _vault) public BaseStrategy(_vault) {
@@ -67,7 +67,6 @@ contract YearnWethCreamStratV2 is BaseStrategy {
      * Expected return this strategy would provide to the Vault the next time `report()` is called
      *
      * The total assets currently in strategy minus what vault believes we have
-     * Does not include unrealised profit such as comp.
      */
     function expectedReturn() public override view returns (uint256) {
         uint256 estimateAssets = estimatedTotalAssets();
@@ -85,10 +84,8 @@ contract YearnWethCreamStratV2 is BaseStrategy {
      */
     function estimatedTotalAssets() public override view returns (uint256) {
 
+        uint256 underlying = underlyingBalanceStored();
 
-        uint256 currentCrETH = crETH.balanceOf(address(this));
-        uint256 underlying = currentCrETH.mul(crETH.exchangeRateStored()).div(1e18);
-        
         return want.balanceOf(address(this)).add(underlying);
     }
 
@@ -108,8 +105,17 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         
         //we want to tend if there is a liquidity crisis
         uint256 cashAvailable = crETH.getCash();        
-        if (cashAvailable <= liquidityCushion) {
+        if (cashAvailable <= liquidityCushion && cashAvailable > dustThreshold && underlyingBalanceStored() > dustThreshold) {
             return true;
+        }
+    }
+
+    function underlyingBalanceStored() public view returns (uint256 balance){
+        uint256 currentCrETH = crETH.balanceOf(address(this));
+        if(currentCrETH == 0){
+            balance = 0;
+        }else{
+            balance = currentCrETH.mul(crETH.exchangeRateStored()).div(1e18);
         }
     }
 
@@ -133,11 +139,11 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         // NOTE: Since debt is adjusted in step-wise fashion, it is appropiate to always trigger here,
         //       because the resulting change should be large (might not always be the case)
         uint256 outstanding = vault.debtOutstanding();
-        if (outstanding > 0 && crETH.getCash().add(want.balanceOf(address(this))) > 0) return true;
+        if (outstanding > dustThreshold && crETH.getCash().add(want.balanceOf(address(this))) > 0) return true;
 
          // Check for profits and losses
         uint256 total = estimatedTotalAssets();
-        if (total < params.totalDebt) return true; // We have a loss to report!
+        if (total.add(dustThreshold) < params.totalDebt) return true; // We have a loss to report!
 
         uint256 profit = 0;
         if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
@@ -157,6 +163,7 @@ contract YearnWethCreamStratV2 is BaseStrategy {
 
         if (crETH.balanceOf(address(this)) == 0) {
             //no position to harvest
+            reserve = weth.balanceOf(address(this));
             return;
         }
         if (reserve != 0) {
@@ -177,9 +184,17 @@ contract YearnWethCreamStratV2 is BaseStrategy {
             if(balanceInWeth >= profit.add(outstanding)){
                 
             }else{
-                _withdrawSome(profit.sub(balanceInWeth).add(outstanding));
+                //change profit to what we can withdraw
+                profit = _withdrawSome(profit.sub(balanceInWeth).add(outstanding));
             }
+
+            reserve = weth.balanceOf(address(this)).sub(profit);
+            
+        }else{
+            reserve = weth.balanceOf(address(this));
         }
+
+        
     }
 
     /*
@@ -224,10 +239,8 @@ contract YearnWethCreamStratV2 is BaseStrategy {
             uint toWithdraw = toKeep.sub(wethBalance);
 
             _withdrawSome(toWithdraw);
-
-            
-
         }
+
     }
 
     /*************
@@ -259,6 +272,9 @@ contract YearnWethCreamStratV2 is BaseStrategy {
                 amountWithdrawn = liquidity-1;
                 crETH.redeemUnderlying(amountWithdrawn); //safe as we return if liquidity == 0
         }
+
+        //remember to turn eth to weth
+        weth.deposit{value: address(this).balance}();
     }
 
 
@@ -289,6 +305,7 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         if(balance > 0){
             _withdrawSome(balance);
         }
+        reserve = 0;
 
     }
 

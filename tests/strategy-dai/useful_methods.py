@@ -60,6 +60,33 @@ def stateOfStrat(strategy, dai, comp):
     print(f'leverage: {leverage:.5f}x')
     assert collat <= 0.75
     print('Expected Profit:', strategy.expectedReturn().to('ether'))
+    toLiquidation =  strategy.getblocksUntilLiquidation()
+    print('Weeks to liquidation:', toLiquidation/44100)
+
+def genericStateOfStrat(strategy, currency, vault):
+    print('\n----state of strat----')
+    
+    print('Want:',currency.balanceOf(strategy).to('ether'))
+    print('Total assets estimate:', strategy.estimatedTotalAssets().to('ether'))  
+    strState = vault.strategies(strategy)
+    totalDebt = strState[5].to('ether')
+    totalReturns = strState[6].to('ether')
+    print(f'Total Strategy Debt: {totalDebt:.5f}')
+    print(f'Total Strategy Returns: {totalReturns:.5f}')
+    print('Outstanding:', strategy.outstanding()) 
+    print('Reserves:', strategy.reserve()) 
+    print('Harvest Trigger:', strategy.harvestTrigger(1000000 * 30 * 1e9)) 
+    print('Tend Trigger:', strategy.tendTrigger(1000000 * 30 *1e9)) #1m gas at 30 gwei
+    print('Emergency Exit:', strategy.emergencyExit()) 
+
+    
+    
+
+def genericStateOfVault(vault, currency):
+    print('\n----state of vault----')
+    balance = vault.totalAssets().to('ether')
+    print('Loose balance in vault:',currency.balanceOf(vault).to('ether'))
+    print(f'Total Assets: {balance:.5f}')
 
 def assertCollateralRatio(strategy):
     deposits, borrows = strategy.getCurrentPosition()

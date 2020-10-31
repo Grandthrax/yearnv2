@@ -1,6 +1,34 @@
 import pytest
 from brownie import Wei
 
+
+#change these fixtures for generic tests
+@pytest.fixture
+def currency(interface):
+    #this one is dai:
+    #yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+    #this one is weth:
+    yield interface.ERC20('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+
+@pytest.fixture
+def strategy_changeable(YearnWethCreamStratV2):
+    yield YearnWethCreamStratV2
+
+@pytest.fixture
+def whale(accounts, history, web3):
+    #big binance wallet
+    #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
+
+    #lots of weth account
+    acc = accounts.at('0x767Ecb395def19Ab8d1b2FCc89B3DDfBeD28fD6b', force=True)
+    yield acc
+
+@pytest.fixture()
+def strategist(accounts, whale, currency):
+    currency.transfer(accounts[1], Wei('1000 ether'), {'from': whale})
+    yield accounts[1]
+
+
 @pytest.fixture
 def dai(interface):
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
@@ -79,10 +107,7 @@ def shared_setup(module_isolation):
 def gov(accounts):
     yield accounts[0]
 
-@pytest.fixture
-def whale(accounts, history, web3):
-    acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
-    yield acc
+
 
 #uniswap weth/wbtc
 @pytest.fixture()
@@ -91,11 +116,7 @@ def whaleU(accounts, history, web3, shared_setup):
     yield acc
     
 
-@pytest.fixture()
-def strategist(accounts, whale, dai):
-    dai.transfer(accounts[1], Wei('10000 ether'), {'from': whale})
-    dai.transfer(accounts[0], Wei('10000 ether'), {'from': whale})
-    yield accounts[1]
+
 
 @pytest.fixture
 def rando(accounts):
