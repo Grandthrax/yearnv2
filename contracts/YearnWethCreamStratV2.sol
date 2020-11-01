@@ -58,6 +58,10 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         require(msg.sender == governance() || msg.sender == strategist, "!management"); // dev: not governance or strategist
         profitFactor = _profitFactor;
     }
+    function setLiquidityCushion(uint256 _liquidityCushion) external {
+        require(msg.sender == governance() || msg.sender == strategist, "!management"); // dev: not governance or strategist
+        liquidityCushion = _liquidityCushion;
+    }
 
     /*
      * Base External Facing Functions
@@ -105,8 +109,29 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         
         //we want to tend if there is a liquidity crisis
         uint256 cashAvailable = crETH.getCash();        
-        if (cashAvailable <= liquidityCushion && cashAvailable > dustThreshold && underlyingBalanceStored() > dustThreshold) {
+        
+        if(cashAvailable == 0){
+            return false;
+        }
+
+        uint wethBalance = weth.balanceOf(address(this));
+
+        uint256 toKeep = 0;
+
+        //to keep is the amount we need to hold to make the liqudity cushion full
+        if(cashAvailable.add(wethBalance.mul(2)) < liquidityCushion){
+            toKeep = liquidityCushion.sub(cashAvailable.add(wethBalance));
+        }
+
+        if (toKeep > wethBalance.add(dustThreshold) && cashAvailable <= liquidityCushion && cashAvailable > dustThreshold && underlyingBalanceStored() > dustThreshold) {
             return true;
+        }
+
+        // if liquidity crisis is over
+        if(wethBalance > 0 && liquidityCushion < cashAvailable){
+            if(cashAvailable - liquidityCushion > gasCost.mul(profitFactor) && wethBalance > gasCost.mul(profitFactor)){
+                return true;
+            }
         }
 
         return false;
@@ -292,7 +317,6 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         weth.deposit{value: address(this).balance}();
     }
 
-
     /*
      * Liquidate as many assets as possible to `want`, irregardless of slippage,
      * up to `_amount`. Any excess should be re-invested here as well.
@@ -308,7 +332,6 @@ contract YearnWethCreamStratV2 is BaseStrategy {
             _withdrawSome(_amount - _balance);
         }
     }
-
 
     /*
      * Make as much capital as possible "free" for the Vault to take. Some slippage
@@ -329,8 +352,6 @@ contract YearnWethCreamStratV2 is BaseStrategy {
         crETH.transfer(_newStrategy, crETH.balanceOf(address(this)));
         want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
     }
-
-
 
     function protectedTokens() internal override view returns (address[] memory) {
         address[] memory protected = new address[](2);
