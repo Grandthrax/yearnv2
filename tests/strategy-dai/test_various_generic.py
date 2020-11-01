@@ -4,6 +4,50 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, g
 import random
 import brownie
 
+def test_donations(strategy_changeable, web3, chain, Vault,currency, whale, strategist):
+    gov = strategist
+    vault = strategist.deploy(
+        Vault, currency, strategist, strategist, "TestVault", "Amount"
+    )
+    deposit_limit = Wei('1000 ether')
+    #set limit to the vault
+    vault.setDepositLimit(deposit_limit, {"from": strategist})
+
+    #deploy strategy
+    strategy = strategist.deploy(strategy_changeable, vault)
+
+    vault.addStrategy(strategy, deposit_limit, deposit_limit, 50, {"from": strategist})
+    amount = Wei('500 ether')
+    deposit(amount, gov, currency, vault)
+    assert vault.strategies(strategy)[5] == 0
+    strategy.harvest({'from': gov})
+    assert vault.strategies(strategy)[6] == 0 
+
+    donation = Wei('100 ether')
+
+    #donation to strategy
+    currency.transfer(strategy, donation, {'from': whale})
+    assert vault.strategies(strategy)[6] == 0 
+    strategy.harvest({'from': gov})
+    assert vault.strategies(strategy)[6] >= donation 
+    assert currency.balanceOf(vault) >= donation
+
+    strategy.harvest({'from': gov})
+    assert vault.strategies(strategy)[5] >= donation + amount
+
+
+    #donation to vault
+    currency.transfer(vault, donation, {'from': whale})
+    assert vault.strategies(strategy)[6] >= donation and  vault.strategies(strategy)[6] < donation*2
+    strategy.harvest({'from': gov})
+    assert vault.strategies(strategy)[5] >= donation*2 + amount
+    strategy.harvest({'from': gov})
+
+    assert vault.strategies(strategy)[6] >= donation and  vault.strategies(strategy)[6] < donation*2
+    #check share price is close to expected
+    assert vault.pricePerShare() > ((donation*2 + amount)/amount)*0.95*1e18 and  vault.pricePerShare() < ((donation*2 + amount)/amount)*1.05*1e18
+
+
 def test_good_migration(strategy_changeable, web3, chain, Vault,currency, whale,rando,  strategist):
     # Call this once to seed the strategy with debt
     gov = strategist
@@ -30,7 +74,7 @@ def test_good_migration(strategy_changeable, web3, chain, Vault,currency, whale,
     strategy.harvest({'from': gov})
 
     strategy_debt = vault.strategies(strategy)[4]  # totalDebt
-    prior_position = currency.balanceOf(strategy)
+    prior_position = strategy.estimatedTotalAssets()
     assert strategy_debt > 0
 
     new_strategy = strategist.deploy(strategy_changeable, vault)
@@ -44,7 +88,7 @@ def test_good_migration(strategy_changeable, web3, chain, Vault,currency, whale,
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})
     assert vault.strategies(strategy)[4] == 0
     assert vault.strategies(new_strategy)[4] == strategy_debt
-    assert currency.balanceOf(new_strategy) == prior_position
+    assert new_strategy.estimatedTotalAssets() > prior_position*0.999 or new_strategy.estimatedTotalAssets() < prior_position*1.001
 
 
 def test_vault_shares_generic(strategy_changeable, web3, chain, Vault,currency, whale, strategist):
@@ -52,7 +96,7 @@ def test_vault_shares_generic(strategy_changeable, web3, chain, Vault,currency, 
     vault = strategist.deploy(
         Vault, currency, strategist, strategist, "TestVault", "Amount"
     )
-    deposit_limit = Wei('10     00 ether')
+    deposit_limit = Wei('1000 ether')
     #set limit to the vault
     vault.setDepositLimit(deposit_limit, {"from": strategist})
 
@@ -172,7 +216,7 @@ def test_apr_generic(strategy_changeable, web3, chain, Vault,currency, whale, st
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
 
-    for i in range(2):
+    for i in range(10):
         waitBlock = 25
         print(f'\n----wait {waitBlock} blocks----')
         chain.mine(waitBlock)
@@ -196,6 +240,7 @@ def test_apr_generic(strategy_changeable, web3, chain, Vault,currency, whale, st
         time =(i+1)*waitBlock
         assert time != 0
         apr = (totalReturns/startingBalance) * (blocks_per_year / time)
+        print(apr)
         print(f'implied apr: {apr:.8%}')
 
     vault.withdraw(vault.balanceOf(whale), {'from': whale})

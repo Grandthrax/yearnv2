@@ -1,12 +1,42 @@
 from itertools import count
 from brownie import Wei, reverts
-from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, harvest, tend, assertCollateralRatio
+from useful_methods import stateOfStrat, genericStateOfStrat, genericStateOfVault,stateOfVault, deposit,wait, withdraw, harvest, tend, assertCollateralRatio
 import random
 import brownie
 
-def test_live_status(web3,  live_vault, live_strategy,  comp,dai, samdev):
+def test_live_status(web3, chain, live_vault, live_strategy,  comp,dai, samdev):
+  #stateOfStrat(live_strategy, dai, comp)
+  #stateOfVault(live_vault, live_strategy)
+
+  genericStateOfStrat(live_strategy, dai, live_vault)
+  genericStateOfVault(live_vault, dai)
+
+  #withdraw(100,samdev, dai, live_vault)
+  genericStateOfStrat(live_strategy, dai, live_vault)
+  genericStateOfVault(live_vault, dai)
+  wait(10, chain)
+  print('\n Harvest')
+  live_strategy.harvest({'from': samdev})
+  
+  genericStateOfStrat(live_strategy, dai, live_vault)
+  genericStateOfVault(live_vault, dai)
   stateOfStrat(live_strategy, dai, comp)
   stateOfVault(live_vault, live_strategy)
+  wait(10, chain)
+  print('\n Harvest')
+  live_strategy.harvest({'from': samdev})
+  genericStateOfStrat(live_strategy, dai, live_vault)
+  genericStateOfVault(live_vault, dai)
+
+  stateOfStrat(live_strategy, dai, comp)
+  stateOfVault(live_vault, live_strategy)
+  
+  #genericStateOfStrat(live_strategy, dai, live_vault)
+  #genericStateOfVault(live_vault, dai)
+
+  #stateOfStrat(live_strategy, dai, comp)
+  #stateOfVault(live_vault, live_strategy)
+
 
 
 def migration_live(web3,  comp, YearnDaiCompStratV2,live_strategy, live_vault,  dai, samdev):

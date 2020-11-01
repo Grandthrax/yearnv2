@@ -11,8 +11,9 @@ def currency(interface):
     yield interface.ERC20('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
 
 @pytest.fixture
-def strategy_changeable(YearnWethCreamStratV2):
+def strategy_changeable(YearnWethCreamStratV2, YearnDaiCompStratV2):
     yield YearnWethCreamStratV2
+    #yield YearnDaiCompStratV2
 
 @pytest.fixture
 def whale(accounts, history, web3):

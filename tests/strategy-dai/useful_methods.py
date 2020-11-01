@@ -85,6 +85,7 @@ def genericStateOfStrat(strategy, currency, vault):
 def genericStateOfVault(vault, currency):
     print('\n----state of vault----')
     balance = vault.totalAssets().to('ether')
+    balance = vault.totalDebt().to('ether')
     print('Loose balance in vault:',currency.balanceOf(vault).to('ether'))
     print(f'Total Assets: {balance:.5f}')
 
@@ -114,14 +115,15 @@ def deposit(amount, user, dai, vault):
     vault.deposit(amount, {'from': user})    
 
 def withdraw(share,whale, dai, vault):
-   
-    print(f'\n----20 blocks later another user withdraws----')
     balanceBefore = dai.balanceOf(whale)
     balance = vault.balanceOf(whale)
    
      
     withdraw = min(balance, balance/share)
+    wits = withdraw/1e18
+
+    print(f'\n----user withdraws {wits}----')
     vault.withdraw(withdraw, {'from': whale})
     balanceAfter = dai.balanceOf(whale)
     moneyOut = balanceAfter-balanceBefore
-   # print('Money Out:', Wei(moneyOut).to('ether'))
+    print('Money Out:', Wei(moneyOut).to('ether'))

@@ -3,6 +3,7 @@ networks:
   default: SamLocal-Fork
   SamLocal-Fork:
     cmd_settings:
+      fork: 'http://127.0.0.1:9999@11168031'
       unlock:
         - 0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8
         - 0xC3D6880fD95E06C816cB030fAc45b3ffe3651Cb0
