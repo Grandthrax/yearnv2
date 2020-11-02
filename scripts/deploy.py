@@ -34,9 +34,9 @@ def main():
     #rewards = get_address("Rewards contract: ")
     rewards = dev
     #name = input(f"Set description ['yearn {token.name()}']: ") or ""
-    name = "yDAI Test Vault V2"
+    name = "WETH yVault Test"
     #symbol = input(f"Set symbol ['y{token.symbol()}']: ") or ""
-    symbol = 'ytDAI'
+    symbol = 'yvWETH'
     print(
         f"""
     Vault Parameters

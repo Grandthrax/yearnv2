@@ -8,6 +8,7 @@ networks:
         - 0xC3D6880fD95E06C816cB030fAc45b3ffe3651Cb0
         - 0xf2d373481e1da4a8ca4734b28f5a642d55fda7d3
         - 0x767Ecb395def19Ab8d1b2FCc89B3DDfBeD28fD6b
+        - 0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE
       #fork: 'http://127.0.0.1:9999@11168031'
 
   

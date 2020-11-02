@@ -76,6 +76,14 @@ def live_strategy(YearnDaiCompStratV2):
     yield YearnDaiCompStratV2.at('0x4C6e9d7E5d69429100Fcc8afB25Ea980065e2773')
 
 @pytest.fixture(scope='session')
+def live_vault_weth(Vault):
+    yield Vault.at('0xf20731f26e98516dd83bb645dd757d33826a37b5')
+
+@pytest.fixture(scope='session')
+def live_strategy_weth(YearnWethCreamStratV2):
+    yield YearnDaiCompStratV2.at('0x97785a81b3505ea9026b2affa709dfd0c9ef24f6')
+
+@pytest.fixture(scope='session')
 def dai(interface):
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
 
