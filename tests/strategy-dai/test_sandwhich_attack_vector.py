@@ -4,7 +4,7 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, g
 import random
 import brownie
 
-def test_liquidity_crunch(TestHighYieldStrategy, web3, accounts, chain, Vault,Contract, currency, whale, strategist):
+def test_sandwhich_attack_vector(TestHighYieldStrategy, web3, accounts, chain, Vault,Contract, currency, whale, strategist):
 
    
     crEth = Contract.from_explorer('0xD06527D5e56A3495252A528C4987003b712860eE')
