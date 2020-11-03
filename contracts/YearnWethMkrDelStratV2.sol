@@ -1,4 +1,5 @@
 pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelinV3/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelinV3/contracts/math/SafeMath.sol";
@@ -16,7 +17,7 @@ interface IVaultE is VaultAPI{
      function deposit(uint256 _amount) external returns (uint256);
      function balanceOf(address _address) external view returns (uint256);
      function withdraw(uint256 _amount) external returns (uint256);
-     function getPricePerShare() external view returns (uint256);
+     function pricePerShare() external view returns (uint256);
 }
 
 contract StrategyMKRVaultDAIDelegate is BaseStrategy{
@@ -262,16 +263,16 @@ contract StrategyMKRVaultDAIDelegate is BaseStrategy{
         
         uint256 v = getUnderlyingDai();
         uint256 d = getTotalDebtAmount();
-        require(v > d, "profit is not realized yet!");
-        uint256 profit = v.sub(d);
 
         uint256 _before = IERC20(want).balanceOf(address(this));
+        uint256 profit = 0;
+        if(v > d){
+            profit = v.sub(d);
+            _swap(_withdrawDaiMost(profit));
 
-
-        _swap(_withdrawDaiMost(profit));
+        }
 
         reserve = _before;
-
 
         if(outstanding < _before){
             reserve = _before - outstanding;
@@ -372,6 +373,9 @@ contract StrategyMKRVaultDAIDelegate is BaseStrategy{
     function repayAmount() public view returns (uint256) {
         uint256 _safe = c.mul(1e2);
         uint256 _current = getmVaultRatio(0);
+        if(_current == uint256(-1)){
+            return 0;
+        }
         _current = _current.mul(105).div(100); // 5% buffer to avoid deposit/rebalance loops
         if (_current < _safe) {
             uint256 d = getTotalDebtAmount();
@@ -428,12 +432,12 @@ contract StrategyMKRVaultDAIDelegate is BaseStrategy{
 
     //the values of our share of underlying dai
     function getUnderlyingDai() public view returns (uint256) {
-        return IERC20(yVaultDAI).balanceOf(address(this)).mul(IVaultE(yVaultDAI).getPricePerShare()).div(1e18);
+        return IERC20(yVaultDAI).balanceOf(address(this)).mul(IVaultE(yVaultDAI).pricePerShare()).div(1e18);
     }
 
     //not sure difference
     function _withdrawDaiMost(uint256 _amount) internal returns (uint256) {
-        uint256 _shares = _amount.mul(1e18).div(IVaultE(yVaultDAI).getPricePerShare());
+        uint256 _shares = _amount.mul(1e18).div(IVaultE(yVaultDAI).pricePerShare());
 
         if (_shares > IERC20(yVaultDAI).balanceOf(address(this))) {
             _shares = IERC20(yVaultDAI).balanceOf(address(this));
@@ -447,7 +451,7 @@ contract StrategyMKRVaultDAIDelegate is BaseStrategy{
 
     // withdraw as close to amount as possible. can go just above
     function _withdrawDaiLeast(uint256 _amount) internal returns (uint256) {
-        uint256 _shares = _amount.mul(1e18).div(IVaultE(yVaultDAI).getPricePerShare()) + 1;
+        uint256 _shares = _amount.mul(1e18).div(IVaultE(yVaultDAI).pricePerShare()) + 1;
 
         if (_shares > IERC20(yVaultDAI).balanceOf(address(this))) {
             _shares = IERC20(yVaultDAI).balanceOf(address(this));
