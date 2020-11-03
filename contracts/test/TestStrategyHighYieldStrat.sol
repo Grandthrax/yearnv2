@@ -15,6 +15,8 @@ contract TestHighYieldStrategy is BaseStrategy {
     // When exiting the position, wait this many times to give everything back
     uint256 countdownTimer = 3;
 
+    uint256 harvestlyReturn = 0.001 ether;
+
     // NOTE: This is a test-only function
     function _takeFunds(uint256 amount) public {
         want.transfer(msg.sender, amount);
@@ -46,7 +48,7 @@ contract TestHighYieldStrategy is BaseStrategy {
     }
 
     function expectedReturn() public override view returns (uint256) {
-        return vault.expectedReturn();
+        return want.balanceOf(address(this)).mul(harvestlyReturn).div(1e18);
     }
 
     function estimatedTotalAssets() public override view returns (uint256) {
@@ -55,7 +57,7 @@ contract TestHighYieldStrategy is BaseStrategy {
 
     function prepareReturn() internal override {
         // During testing, send this contract some tokens to simulate "Rewards"
-        reserve = want.balanceOf(address(this)).mul(999).div(1000);
+        reserve = want.balanceOf(address(this)).mul(1e18 - harvestlyReturn).div(1e18);
     }
 
     function adjustPosition() internal override {

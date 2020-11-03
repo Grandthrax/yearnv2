@@ -4,9 +4,24 @@ from useful_methods import stateOfStrat, genericStateOfStrat, genericStateOfVaul
 import random
 import brownie
 
+
+def test_live_status2(web3, chain, live_vault, live_strategy,  comp,dai, samdev):
+
+  stateOfStrat(live_strategy, dai, comp)
+  stateOfVault(live_vault, live_strategy)
+
+  genericStateOfStrat(live_strategy, dai, live_vault)
+  genericStateOfVault(live_vault, dai)
+
+
+
+
+
+
+
 def test_live_status(web3, chain, live_vault, live_strategy,  comp,dai, samdev):
-  #stateOfStrat(live_strategy, dai, comp)
-  #stateOfVault(live_vault, live_strategy)
+  stateOfStrat(live_strategy, dai, comp)
+  stateOfVault(live_vault, live_strategy)
 
   genericStateOfStrat(live_strategy, dai, live_vault)
   genericStateOfVault(live_vault, dai)

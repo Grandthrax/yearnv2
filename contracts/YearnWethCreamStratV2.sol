@@ -10,8 +10,6 @@ import "./Interfaces/Compound/CEtherI.sol";
 
 import "./Interfaces/UniswapInterfaces/IWETH.sol";
 
-import "./Interfaces/Yearn/IController.sol";
-
 import "./BaseStrategy.sol";
 
 

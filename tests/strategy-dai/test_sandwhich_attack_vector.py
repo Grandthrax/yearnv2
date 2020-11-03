@@ -49,7 +49,7 @@ def test_sandwhich_attack_vector(TestHighYieldStrategy, web3, accounts, chain, V
 
     #now for the attack
 
-    #whale sees harvest enter tx pool
+    # whale sees harvest enter tx pool
     # this all happens in smart contract 
     # whale borrows 300k sushi
     attack_amount = 300000*1e18
