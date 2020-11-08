@@ -86,8 +86,9 @@ contract GenericCompound is IGenericLender{
 
     }
 
+    //withdraw an amount including any want balance
     function _withdraw(uint256 amount) internal  returns (uint256){
-
+/*
         uint256 returning;
 
         uint256 liquidity = want.balanceOf(address(cToken));
@@ -111,7 +112,41 @@ contract GenericCompound is IGenericLender{
         
         want.safeTransfer(address(strategy),returning);
 
-        return returning;
+        return returning;*/
+
+
+
+        uint balanceUnderlying = cToken.balanceOfUnderlying(address(this));
+        uint looseBalance = want.balanceOf(address(this));
+        uint total = balanceUnderlying.add(looseBalance);
+
+        if(amount > total) {
+            //cant withdraw more than we own
+            amount = total;
+        }
+        if(looseBalance >= amount){
+            want.safeTransfer(address(strategy),amount);
+            return amount;
+        }
+
+        //not state changing but OK because of previous call
+        uint liquidity = want.balanceOf(address(cToken));
+
+        if(liquidity > 1) {
+            uint256 toWithdraw = amount.sub(looseBalance);
+
+            if(toWithdraw <= liquidity) {
+
+                //we can take all
+                cToken.redeemUnderlying(toWithdraw);
+            } else {
+                //take all we can
+                cToken.redeemUnderlying(liquidity);
+            }
+        }
+        looseBalance = want.balanceOf(address(this));
+        want.safeTransfer(address(strategy),looseBalance);
+        return looseBalance;
 
     }
 
@@ -133,7 +168,7 @@ contract GenericCompound is IGenericLender{
 
     }
     function withdrawAll() external override management returns (bool){
-        uint256 invested = cToken.balanceOfUnderlying(address(this));
+        uint256 invested = _nav();
         uint256 returned = _withdraw(invested);
         return returned >= invested;
 

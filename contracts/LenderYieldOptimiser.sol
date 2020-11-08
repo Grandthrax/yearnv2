@@ -230,7 +230,7 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         uint256 looseAssets = want.balanceOf(address(this));
 
         // our simple algo
-        // get the lowest apr strat and nav
+        // get the lowest apr strat
         // cycle through and see who could take its funds plus want for the highest apr
         uint256 lowestApr = uint256(-1);
         uint256 lowest = 0;
@@ -254,7 +254,9 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         for(uint i = 0; i < lenders.length; i++){
 
            
-            uint256 apr = lenders[i].aprAfterDeposit(toAdd);
+            uint256 apr;
+            apr = lenders[i].aprAfterDeposit(looseAssets);
+           
             if(apr > highestApr){
                 highestApr = apr;
                 highest = i;
@@ -262,9 +264,9 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
              
         }
 
-
         //if we can improve apr by withdrawing we do so
-        if(highestApr > lowestApr){
+        uint256 potential = lenders[highest].aprAfterDeposit(toAdd);
+        if(potential > lowestApr){
             //apr should go down after deposit so wont be withdrawing from self
             lenders[lowest].withdrawAll();
         }
