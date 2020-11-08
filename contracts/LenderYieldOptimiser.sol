@@ -1,5 +1,5 @@
 pragma solidity ^0.6.12;
-import {BaseStrategyV0_1_3, StrategyParams} from "./BaseStrategyV0_1_3.sol";
+import "./BaseStrategyV0_1_3.sol";
 pragma experimental ABIEncoderV2;
 
 import "./GenericLender/IGenericLender.sol";
@@ -31,6 +31,9 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         minReportDelay = 6300;
         profitFactor = 100;
         debtThreshold = 1 gwei;
+
+        //we do this horrible thing because you can't compare strings in solidity
+        require(keccak256(bytes(apiVersion())) == keccak256(bytes(VaultAPI(_vault).apiVersion())), "WRONG VERSION");
     }
 
 
@@ -41,11 +44,37 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         return "StrategyLenderYieldOptimiser";
     }
 
-    function addLender(address a) public{
+    //management functions
+    function addLender(address a) public management{
+       IGenericLender n = IGenericLender(a);
 
+        for(uint i = 0; i < lenders.length; i++){
+            require(a != address(lenders[i]), "Already Added");
+        }
+        lenders.push(n);
     }
-    function removeLender(address a) public{
+    function removeLender(address a) public management{
+       for(uint i = 0; i < lenders.length; i++){
+            
+            if(a == address(lenders[i]))
+            {
+                //withdraw first
+                require(lenders[i].withdrawAll(), "WITHDRAW FAILED");
+                //if balance to spend
+                if(want.balanceOf(address(this)) > 0){
+                    adjustPosition(0);
+                }
 
+                //put the last index here
+                //remove last index
+                if(i != lenders.length){
+                    lenders[i] = lenders[lenders.length-1];
+                }
+                delete lenders[lenders.length-1];
+                return;
+            }
+        }
+        require(false, "NOT LENDER");
     }
 
     // lent assets plus loose assets
@@ -127,11 +156,6 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         }
     }
 
-    struct lendStatus{
-        uint256 assets;
-        uint256 rate;
-    }
-
     /*
     * Key logic.
     *   The algorithm moves assets from lowest return to highest
@@ -140,6 +164,8 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
     *
     */
     function adjustPosition(uint256 _debtOutstanding) internal override {
+
+        _debtOutstanding; //ignored
         //emergency exit is dealt with at beginning of harvest
         if (emergencyExit) {
             return;
@@ -150,66 +176,75 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         //all loose assets are to be invested
         uint256 looseAssets = want.balanceOf(address(this));
 
-        lendStatus[] memory lendStatuses;
-        
-        /*//if we have more than enough weth then invest the extra
-        if(wethBalance > toKeep){
+        // our simple algo
+        // get the lowest apr strat and nav
+        // cycle through and see who could take its funds plus want for the highest apr
+        uint256 lowestApr = uint256(-1);
+        uint256 lowest = 0;
+        uint256 lowestNav = 0;
+        for(uint i = 0; i < lenders.length; i++){
+            if(lenders[i].hasAssets()){
+                uint256 apr = lenders[i].apr();
+                if(apr < lowestApr){
+                    lowestApr = apr;
+                    lowest = i;
+                    lowestNav = lenders[i].nav();
+                }
+             }
+        }
 
-            uint toInvest = wethBalance.sub(toKeep);
+        uint256 toAdd = lowestNav.add(looseAssets);
 
-            //turn weth into eth first
-            IWETH(weth).withdraw(toInvest);
-            //mint
-            Bank(bank).deposit{value: toInvest}();
+        uint256 highestApr = 0;
+        uint256 highest = 0;
 
-        }else if(wethBalance < toKeep){
-            //free up the difference if we can
-            uint toWithdraw = toKeep.sub(wethBalance);
+        for(uint i = 0; i < lenders.length; i++){
+           
+            uint256 apr = lenders[i].aprAfterDeposit(toAdd);
+            if(apr > highestApr){
+                highestApr = apr;
+                highest = i;
+            }
+             
+        }
 
-            _withdrawSome(toWithdraw);
-        }*/
+
+        //if we can improve apr by withdrawing we do so
+        if(highestApr > lowestApr){
+            lenders[lowest].withdrawAll();
+        }
+
+        want.transfer(address(lenders[highest]), want.balanceOf(address(this)));
+        lenders[highest].deposit();
+
     }
+
 
     //cycle through withdrawing from worst rate first
     function _withdrawSome(uint256 _amount) internal returns(uint256 amountWithdrawn) {
-        /*
-        //state changing
-        uint balance = bankBalance();
-        if(_amount > balance) {
-            //cant withdraw more than we own
-            _amount = balance;
+     
+        //most situations this will only run once. Only big withdrawals will be a gas guzzler
+        while(amountWithdrawn < _amount){
+            uint256 lowestApr = uint256(-1);
+            uint256 lowest = 0;
+            for(uint i = 0; i < lenders.length; i++){
+                if(lenders[i].hasAssets()){
+                    uint256 apr = lenders[i].apr();
+                    if(apr < lowestApr){
+                        lowestApr = apr;
+                        lowest = i;
+                    }
+                }
+                
+            }
+            if(!lenders[lowest].hasAssets()){
+                return amountWithdrawn;
+            }
+            amountWithdrawn += lenders[lowest].withdraw(_amount);
         }
-
-        //not state changing but OK because of previous call
-        uint liquidity = bank.balance;
-        amountWithdrawn = 0;
-        if(liquidity == 0) {
-            return amountWithdrawn;
-        }
-
-        if(_amount <= liquidity) {
-            amountWithdrawn = _amount;
-            //we can take all
-            withdrawUnderlying(amountWithdrawn);
-        } else {
-            //take all we can
-            withdrawUnderlying(amountWithdrawn);
-        }
-
-        //in case we get back less than expected
-        amountWithdrawn = address(this).balance;
-
-        //remember to turn eth to weth
-        IWETH(weth).deposit{value: amountWithdrawn}();*/
     }
 
-    /*
-     * Make as much capital as possible "free" for the Vault to take. Some slippage
-     * is allowed, since when this method is called the strategist is no longer receiving
-     * their performance fee. The goal is for the strategy to divest as quickly as possible
-     * while not suffering exorbitant losses. This function is used during emergency exit
-     * instead of `prepareReturn()`
-     */
+
     function exitPosition() internal override {
         uint balance = lentTotalAssets();
         if(balance > 0){
@@ -268,6 +303,11 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         address[] memory protected = new address[](2);
         protected[0] = address(want);
         return protected;
+    }
+
+    modifier management(){
+        require(msg.sender == governance() || msg.sender == strategist, "!management");
+        _;
     }
 
 }
