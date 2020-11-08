@@ -88,33 +88,6 @@ contract GenericCompound is IGenericLender{
 
     //withdraw an amount including any want balance
     function _withdraw(uint256 amount) internal  returns (uint256){
-/*
-        uint256 returning;
-
-        uint256 liquidity = want.balanceOf(address(cToken));
-        if(liquidity > 1){
-            uint256 toWithdraw = amount - want.balanceOf(address(this));
-            if(liquidity > toWithdraw){
-                cToken.redeemUnderlying(toWithdraw);
-
-            }else{
-                cToken.redeemUnderlying(liquidity.sub(1));
-            }
-        }
-
-       uint256 balance = want.balanceOf(address(this));
-        
-        if(balance > amount){
-            returning = amount;
-        }else{
-            returning = balance;
-        }
-        
-        want.safeTransfer(address(strategy),returning);
-
-        return returning;*/
-
-
 
         uint balanceUnderlying = cToken.balanceOfUnderlying(address(this));
         uint looseBalance = want.balanceOf(address(this));
