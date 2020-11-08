@@ -9,7 +9,7 @@ import "./Interfaces/UniswapInterfaces/IWETH.sol";
 
 import "./Interfaces/Yearn/IController.sol";
 
-import "./BaseStrategy.sol";
+import "./BaseStrategyV0_1_1.sol";
 
 interface LoanToken{
 

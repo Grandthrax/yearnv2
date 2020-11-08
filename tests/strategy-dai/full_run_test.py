@@ -4,7 +4,7 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, h
 import random
 import brownie
 
-def test_full_live(web3, chain, comp, Vault,YearnWethCreamStratV2, weth, whale, strategist,cdai):
+def test_full_live(web3, chain, comp, Vault,YearnWethCreamStratV2, weth, whale, strategist,dai, cdai):
     #our humble strategist is going to publish both the vault and the strategy
 
 

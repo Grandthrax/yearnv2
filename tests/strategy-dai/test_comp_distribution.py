@@ -5,8 +5,8 @@ import brownie
 
 def test_comp_dis(web3, chain, comp, vault, largerunningstrategy, dai, gov):
 
-    stateOfStrat(largerunningstrategy, dai)
-    stateOfVault(vault, largerunningstrategy)
+    #stateOfStrat(largerunningstrategy, dai)
+   # stateOfVault(vault, largerunningstrategy)
 
     wait(100, chain)
 
@@ -14,7 +14,7 @@ def test_comp_dis(web3, chain, comp, vault, largerunningstrategy, dai, gov):
     print('\n----checking comp----')
     balanceBefore = comp.balanceOf(largerunningstrategy)
     
-    comp_prediction = largerunningstrategy._predictCompAccrued()
+    comp_prediction = largerunningstrategy.predictCompAccrued()
     print(comp_prediction.to('ether'), 'comp accrued')
     largerunningstrategy._claimComp({'from': gov})
     comp_balance = comp.balanceOf(largerunningstrategy) -balanceBefore
@@ -22,5 +22,5 @@ def test_comp_dis(web3, chain, comp, vault, largerunningstrategy, dai, gov):
 
     assert comp_balance< comp_prediction*1.1 and comp_balance> comp_prediction*0.9
 
-    stateOfStrat(largerunningstrategy, dai)
-    stateOfVault(vault, largerunningstrategy)
+  #  stateOfStrat(largerunningstrategy, dai)
+  #  stateOfVault(vault, largerunningstrategy)

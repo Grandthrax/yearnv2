@@ -9,7 +9,7 @@ import "@openzeppelinV3/contracts/token/ERC20/SafeERC20.sol";
 import "./Interfaces/Maker/Maker.sol";
 import "./Interfaces/UniswapInterfaces/IUniswapV2Router02.sol";
 
-import "./BaseStrategy.sol";
+import "./BaseStrategyV0_1_1.sol";
 
 
 //extend the vault API from base strategy
@@ -20,7 +20,7 @@ interface IVaultE is VaultAPI{
      function pricePerShare() external view returns (uint256);
 }
 
-contract StrategyMKRVaultDAIDelegate is BaseStrategy{
+contract StrategyMKRVaultDAIDelegate is BaseStrategyV0_1_1{
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -58,7 +58,7 @@ contract StrategyMKRVaultDAIDelegate is BaseStrategy{
 
     uint256 public cdpId;
 
-    constructor(address _vault) public BaseStrategy(_vault){
+    constructor(address _vault) public BaseStrategyV0_1_1(_vault){
         cdpId = ManagerLike(cdp_manager).open(ilk, address(this));
         _approveAll();
     }

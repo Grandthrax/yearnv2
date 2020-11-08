@@ -2,15 +2,15 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import {BaseStrategy, StrategyParams} from "../BaseStrategy.sol";
+import {BaseStrategyV0_1_1, StrategyParams} from "../BaseStrategyV0_1_1.sol";
 
 /*
  * This Strategy serves as both a mock Strategy for testing, and an example
  * for integrators on how to use BaseStrategy
  */
 
-contract TestStrategy is BaseStrategy {
-    constructor(address _vault) public BaseStrategy(_vault) {}
+contract TestStrategy is BaseStrategyV0_1_1 {
+    constructor(address _vault) public BaseStrategyV0_1_1(_vault) {}
 
     // When exiting the position, wait this many times to give everything back
     uint256 countdownTimer = 3;

@@ -9,12 +9,13 @@ networks:
         - 0xf2d373481e1da4a8ca4734b28f5a642d55fda7d3
         - 0x767Ecb395def19Ab8d1b2FCc89B3DDfBeD28fD6b
         - 0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE
-      #fork: 'http://127.0.0.1:9999@11168031'
+      #fork: 'http://127.0.0.1:9999@11190987'
 
   
 # require OpenZepplin Contracts
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.1.0
+  - iearn-finance/yearn-vaults@0.1.3
 
 # path remapping to support OpenZepplin imports with NPM-style path
 compiler:

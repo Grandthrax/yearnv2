@@ -20,7 +20,7 @@ import "./Interfaces/Aave/ILendingPool.sol";
 
 import "./Interfaces/Chainlink/AggregatorV3Interface.sol";
 
-import "./BaseStrategy.sol";
+import "./BaseStrategyV0_1_1.sol";
 
 /********************
  *   A simple Comp farming strategy from leveraged lending of DAI.
@@ -30,7 +30,7 @@ import "./BaseStrategy.sol";
  *
  ********************* */
 
-contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashLoanReceiverBase {
+contract YearnDaiCompStratV2 is BaseStrategyV0_1_1, DydxFlashloanBase, ICallee, FlashLoanReceiverBase {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -72,7 +72,7 @@ contract YearnDaiCompStratV2 is BaseStrategy, DydxFlashloanBase, ICallee, FlashL
     bool public DyDxActive = true;
     bool public AaveActive = true;
 
-    constructor(address _vault) public BaseStrategy(_vault) FlashLoanReceiverBase(AAVE_LENDING) {
+    constructor(address _vault) public BaseStrategyV0_1_1(_vault) FlashLoanReceiverBase(AAVE_LENDING) {
         //only accept DAI vault
         require(vault.token() == DAI, "!DAI");
 

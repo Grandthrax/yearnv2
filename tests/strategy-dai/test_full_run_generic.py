@@ -29,12 +29,14 @@ def test_full_generic(strategy_changeable, web3, chain, Vault,currency, whale, s
 
     
     #our humble strategist deposits some test funds
-    depositAmount =  Wei('100 ether')
+    depositAmount =  Wei('501 ether')
     deposit(depositAmount, strategist, currency, vault)
+    #print(vault.creditAvailable(strategy))
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
+
     assert strategy.estimatedTotalAssets() == 0
-    assert strategy.harvestTrigger(1000000 * 30 * 1e9) == True
+    assert strategy.harvestTrigger(1) == True
 
     harvest(strategy, strategist, vault)
 
@@ -42,7 +44,7 @@ def test_full_generic(strategy_changeable, web3, chain, Vault,currency, whale, s
     genericStateOfVault(vault, currency)
 
     assert strategy.estimatedTotalAssets() >= depositAmount*0.999999 #losing some dust is ok
-    assert strategy.harvestTrigger(1000000 * 30 * 1e9) == False
+    assert strategy.harvestTrigger(1) == False
 
     #whale deposits as well
     whale_deposit  = Wei('1000 ether')

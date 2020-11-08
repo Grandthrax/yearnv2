@@ -105,7 +105,7 @@ interface StrategyAPI {
  * implemented to adapt the strategy to the particular needs it has to create a return.
  */
 
-abstract contract BaseStrategy {
+abstract contract BaseStrategyV0_1_1 {
     using SafeMath for uint256;
 
     // Version of this contract
@@ -293,7 +293,7 @@ abstract contract BaseStrategy {
 
     function migrate(address _newStrategy) external {
         require(msg.sender == address(vault) || msg.sender == governance());
-        require(BaseStrategy(_newStrategy).vault() == vault);
+        require(BaseStrategyV0_1_1(_newStrategy).vault() == vault);
         prepareMigration(_newStrategy);
     }
 

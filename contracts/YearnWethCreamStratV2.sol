@@ -10,7 +10,7 @@ import "./Interfaces/Compound/CEtherI.sol";
 
 import "./Interfaces/UniswapInterfaces/IWETH.sol";
 
-import "./BaseStrategy.sol";
+import "./BaseStrategyV0_1_1.sol";
 
 
 /********************
@@ -20,7 +20,7 @@ import "./BaseStrategy.sol";
  *
  ********************* */
 
-contract YearnWethCreamStratV2 is BaseStrategy {
+contract YearnWethCreamStratV2 is BaseStrategyV0_1_1 {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -41,7 +41,7 @@ contract YearnWethCreamStratV2 is BaseStrategy {
     uint256 public dustThreshold = 0.01 ether; // multiple before triggering harvest
 
 
-    constructor(address _vault) public BaseStrategy(_vault) {
+    constructor(address _vault) public BaseStrategyV0_1_1(_vault) {
         //only accept ETH vault
         require(vault.token() == address(weth), "!WETH");
     }

@@ -6,9 +6,16 @@ from brownie import Wei
 @pytest.fixture
 def currency(interface):
     #this one is dai:
-    #yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+    yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
     #this one is weth:
-    yield interface.ERC20('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+    #yield interface.ERC20('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+
+@pytest.fixture
+def Vault(VaultV0_1_3, VaultV0_1_1):
+    #this one is dai:
+    yield VaultV0_1_1
+    #this one is weth:
+    #yield VaultV0_1_3
 
 @pytest.fixture
 def weth(interface):
@@ -17,16 +24,16 @@ def weth(interface):
 
 @pytest.fixture
 def strategy_changeable(YearnWethCreamStratV2, YearnDaiCompStratV2):
-    yield YearnWethCreamStratV2
-    #yield YearnDaiCompStratV2
+    #yield YearnWethCreamStratV2
+    yield YearnDaiCompStratV2
 
 @pytest.fixture
 def whale(accounts, history, web3):
     #big binance wallet
-    #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
+    acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
 
     #lots of weth account
-    acc = accounts.at('0x767Ecb395def19Ab8d1b2FCc89B3DDfBeD28fD6b', force=True)
+    #acc = accounts.at('0x767Ecb395def19Ab8d1b2FCc89B3DDfBeD28fD6b', force=True)
     yield acc
 
 @pytest.fixture()
