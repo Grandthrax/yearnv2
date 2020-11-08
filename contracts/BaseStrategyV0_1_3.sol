@@ -94,6 +94,8 @@ interface StrategyAPI {
 
     function keeper() external view returns (address);
 
+    function strategist() external view returns (address);
+
     function tendTrigger(uint256 callCost) external view returns (bool);
 
     function tend() external;

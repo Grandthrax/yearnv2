@@ -21,5 +21,5 @@ interface CErc20I is CTokenI {
         CTokenI cTokenCollateral
     ) external returns (uint256);
 
-    function underlying() external returns (address);
+    function underlying() external view returns (address);
 }

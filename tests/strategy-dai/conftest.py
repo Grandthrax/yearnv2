@@ -13,9 +13,9 @@ def currency(interface):
 @pytest.fixture
 def Vault(VaultV0_1_3, VaultV0_1_1):
     #this one is dai:
-    yield VaultV0_1_1
+    #yield VaultV0_1_1
     #this one is weth:
-    #yield VaultV0_1_3
+    yield VaultV0_1_3
 
 @pytest.fixture
 def weth(interface):
@@ -45,6 +45,10 @@ def strategist(accounts, whale, currency):
 @pytest.fixture
 def dai(interface):
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+
+@pytest.fixture
+def usdc(interface):
+    yield interface.ERC20('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')
 
 #any strategy just deploys base strategy can be used because they have the same interface
 @pytest.fixture(scope='session')

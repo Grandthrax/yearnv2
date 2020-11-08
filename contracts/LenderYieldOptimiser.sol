@@ -27,6 +27,7 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
 
 
     constructor(address _vault) public BaseStrategyV0_1_3(_vault) {
+ 
         // You can set these parameters on deployment to whatever you want
         minReportDelay = 6300;
         profitFactor = 100;
@@ -53,17 +54,25 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         }
         lenders.push(n);
     }
-    function removeLender(address a) public management{
-       for(uint i = 0; i < lenders.length; i++){
+    function safeRemoveLender(address a) public management{
+        _removeLender(a, false);
+    }
+
+    function forceRemoveLender(address a) public management{
+        _removeLender(a, true);
+       
+    }
+    function _removeLender(address a, bool force) internal {
+        for(uint i = 0; i < lenders.length; i++){
             
-            if(a == address(lenders[i]))
-            {
-                //withdraw first
-                require(lenders[i].withdrawAll(), "WITHDRAW FAILED");
-                //if balance to spend
-                if(want.balanceOf(address(this)) > 0){
-                    adjustPosition(0);
+            if(a == address(lenders[i])){
+
+                bool allWithdrawn = lenders[i].withdrawAll();
+
+                if(!force){
+                    require(allWithdrawn, "WITHDRAW FAILED");
                 }
+                
 
                 //put the last index here
                 //remove last index
@@ -71,11 +80,38 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
                     lenders[i] = lenders[lenders.length-1];
                 }
                 delete lenders[lenders.length-1];
+
+                //if balance to spend
+                if(want.balanceOf(address(this)) > 0){
+                    adjustPosition(0);
+                }
                 return;
             }
         }
         require(false, "NOT LENDER");
+        
+
     }
+
+    struct lendStatus{
+        string name;
+        uint256 assets;
+        uint256 rate;
+    }
+    
+    function lendStatuses() public view returns(lendStatus[] memory){
+        lendStatus[] memory statuses = new lendStatus[](lenders.length);
+         for(uint i = 0; i < lenders.length; i++){
+            lendStatus memory s;
+            s.name = lenders[i].lenderName();
+            s.assets = lenders[i].nav();
+            s.rate = lenders[i].apr();
+            statuses[i] = s;
+        }
+
+        return statuses;
+    }
+
 
     // lent assets plus loose assets
     function estimatedTotalAssets() public override view returns (uint256) {
@@ -84,6 +120,23 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         nav += want.balanceOf(address(this));
 
         return nav;
+    }
+
+    function numLenders() public view returns (uint256) {
+        return lenders.length;
+
+    }
+
+    function estimatedAPR() public view returns (uint256) {
+        uint256 weightedAPR = 0;
+        
+        for(uint i = 0; i < lenders.length; i++){
+            weightedAPR += lenders[i].weightedApr();
+        }
+
+        uint256 bal = estimatedTotalAssets();
+
+        return weightedAPR.div(bal);
     }
 
     //cycle all lenders and collect balances
@@ -199,6 +252,7 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
         uint256 highest = 0;
 
         for(uint i = 0; i < lenders.length; i++){
+
            
             uint256 apr = lenders[i].aprAfterDeposit(toAdd);
             if(apr > highestApr){
@@ -211,10 +265,11 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
 
         //if we can improve apr by withdrawing we do so
         if(highestApr > lowestApr){
+            //apr should go down after deposit so wont be withdrawing from self
             lenders[lowest].withdrawAll();
         }
 
-        want.transfer(address(lenders[highest]), want.balanceOf(address(this)));
+        want.safeTransfer(address(lenders[highest]), want.balanceOf(address(this)));
         lenders[highest].deposit();
 
     }
