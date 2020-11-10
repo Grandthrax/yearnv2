@@ -64,30 +64,34 @@ def stateOfStrat(strategy, dai, comp):
     print('Weeks to liquidation:', toLiquidation/44100)
 
 def genericStateOfStrat(strategy, currency, vault):
-    print('\n----state of strat----')
-    
-    print('Want:',currency.balanceOf(strategy).to('ether'))
-    print('Total assets estimate:', strategy.estimatedTotalAssets().to('ether'))  
-    strState = vault.strategies(strategy)
-    totalDebt = strState[5].to('ether')
-    totalReturns = strState[6].to('ether')
-    print(f'Total Strategy Debt: {totalDebt:.5f}')
-    print(f'Total Strategy Returns: {totalReturns:.5f}')
-    print('Outstanding:', strategy.outstanding().to('ether')) 
-    print('Reserves:', strategy.reserve().to('ether')) 
-    print('Harvest Trigger:', strategy.harvestTrigger(1000000 * 30 * 1e9)) 
-    print('Tend Trigger:', strategy.tendTrigger(1000000 * 30 *1e9)) #1m gas at 30 gwei
-    print('Emergency Exit:', strategy.emergencyExit()) 
+    decimals = currency.decimals()
+    print(f"\n----state of {strategy.name()}----")
 
-    
-    
+    print("Want:", currency.balanceOf(strategy)/  (1 ** decimals))
+    print("Total assets estimate:", strategy.estimatedTotalAssets()/  (10 ** decimals))
+    strState = vault.strategies(strategy)
+    totalDebt = strState[5]/  (10 ** decimals)
+    debtLimit = strState[2]/  (10 ** decimals)
+
+    totalReturns = strState[6]/  (10 ** decimals)
+    print(f"Total Strategy Debt: {totalDebt:.5f}")
+    print(f"Strategy Debt Limit: {debtLimit:.5f}")
+    print(f"Total Strategy Returns: {totalReturns:.5f}")
+    print("Harvest Trigger:", strategy.harvestTrigger(1000000 * 30 * 1e9))
+    print(
+        "Tend Trigger:", strategy.tendTrigger(1000000 * 30 * 1e9)
+    )  # 1m gas at 30 gwei
+    print("Emergency Exit:", strategy.emergencyExit())
+
 
 def genericStateOfVault(vault, currency):
-    print('\n----state of vault----')
-    balance = vault.totalAssets().to('ether')
-    balance = vault.totalDebt().to('ether')
-    print('Loose balance in vault:',currency.balanceOf(vault).to('ether'))
-    print(f'Total Assets: {balance:.5f}')
+    decimals = currency.decimals()
+    print(f"\n----state of {vault.name()} vault----")
+    balance = vault.totalAssets()/  (10 ** decimals)
+    print(f"Total Assets: {balance:.5f}")
+    balance = vault.totalDebt()/  (10 ** decimals)
+    print("Loose balance in vault:", currency.balanceOf(vault)/  (10 ** decimals))
+    print(f"Total Debt: {balance:.5f}")
 
 def assertCollateralRatio(strategy):
     deposits, borrows = strategy.getCurrentPosition()

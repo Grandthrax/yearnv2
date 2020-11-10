@@ -140,19 +140,15 @@ contract GenericCream is IGenericLender{
 
     function aprAfterDeposit(uint256 amount) external override view returns (uint256){
         uint256 cashPrior = want.balanceOf(address(cToken));
-
         
         uint256 borrows = cToken.totalBorrows();
-
-        
         uint256 reserves = cToken.totalReserves();
 
         uint256 reserverFactor = cToken.reserveFactorMantissa();
-
         InterestRateModel model = cToken.interestRateModel();
 
         //the supply rate is derived from the borrow rate, reserve factor and the amount of total borrows.
-        uint256 supplyRate = model.getSupplyRate(cashPrior.add(amount), borrows,reserves, reserverFactor );
+        uint256 supplyRate = model.getSupplyRate(cashPrior.add(amount), borrows,reserves, reserverFactor);
 
         return supplyRate.mul(blocksPerYear);
 

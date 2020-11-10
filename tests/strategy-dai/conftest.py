@@ -39,8 +39,9 @@ def whale(accounts, history, web3):
     yield acc
 
 @pytest.fixture()
-def strategist(accounts, whale, currency):
+def strategist(accounts, whale, currency, usdc):
     currency.transfer(accounts[1], Wei('1000 ether'), {'from': whale})
+    usdc.transfer(accounts[1], 1000 *1e6, {'from': whale})
     yield accounts[1]
 
 
