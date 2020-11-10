@@ -196,15 +196,13 @@ contract GenericDyDx is IGenericLender{
         ISoloMargin solo =ISoloMargin(SOLO);
         Types.TotalPar memory par = solo.getMarketTotalPar(dydxMarketId);
         address interestSetter = solo.getMarketInterestSetter(dydxMarketId);
-        //convert extra supply to par
-        uint256 parToAdd = 0;
-        if(extraSupply > 0){
-            
-        }
 
-        uint256 interestRate = IInterestSetter(interestSetter).getInterestRate(address(want),par.borrow, par.supply + extraSupply).value;
+        uint256 borrow = par.borrow;
+        uint256 supply = uint256(par.supply).add(extraSupply);
 
-        return interestRate.mul(secondPerYear);
+        uint256 borrowInterestRate = IInterestSetter(interestSetter).getInterestRate(address(want),borrow, supply).value;
+        uint256 lendInterestRate = borrowInterestRate.mul(borrow).div(supply);
+        return lendInterestRate.mul(secondPerYear);
 
 
     }

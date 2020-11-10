@@ -8,8 +8,6 @@ import "@openzeppelinV3/contracts/math/SafeMath.sol";
 import "@openzeppelinV3/contracts/utils/Address.sol";
 import "@openzeppelinV3/contracts/token/ERC20/SafeERC20.sol";
 
-import "../Interfaces/UniswapInterfaces/IUniswapV2Router02.sol";
-
 
 import "./IGenericLender.sol";
 
@@ -20,18 +18,13 @@ import "./IGenericLender.sol";
  *
  ********************* */
 
-contract GenericCompound is IGenericLender{
+contract GenericCream is IGenericLender{
 
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
 
     uint256 private constant blocksPerYear = 2_300_000;
-    address public constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-    address public constant comp = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
-    address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-
-    uint256 public minCompToSell = 0.5 ether;
 
     CErc20I public cToken;
     constructor(address _strategy,string memory name, address _cToken) public IGenericLender(_strategy, name) {
@@ -117,25 +110,12 @@ contract GenericCompound is IGenericLender{
                 cToken.redeemUnderlying(liquidity);
             }
         }
-        _disposeOfComp();
         looseBalance = want.balanceOf(address(this));
         want.safeTransfer(address(strategy),looseBalance);
         return looseBalance;
 
     }
 
-    function _disposeOfComp() internal {
-        uint256 _comp = IERC20(comp).balanceOf(address(this));
-
-        if (_comp > minCompToSell) {
-            address[] memory path = new address[](3);
-            path[0] = comp;
-            path[1] = weth;
-            path[2] = address(want);
-
-            IUniswapV2Router02(uniswapRouter).swapExactTokensForTokens(_comp, uint256(0), path, address(this), now);
-        }
-    }
     function deposit() external override management{
         uint256 balance = want.balanceOf(address(this));
         cToken.mint(balance);

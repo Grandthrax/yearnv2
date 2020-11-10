@@ -4,7 +4,7 @@ from useful_methods import stateOfStrat, stateOfVault, deposit,wait, withdraw, g
 import random
 import brownie
 
-def test_setup_deposit(usdc, whale,gov,strategist, Vault, LenderYieldOptimiser, GenericCompound, GenericDyDx, interface):
+def test_setup_deposit(usdc, whale,gov,strategist, Vault, LenderYieldOptimiser, GenericCompound, GenericCream, GenericDyDx, interface):
 
     #deploy vault
     vault = gov.deploy(
@@ -24,7 +24,7 @@ def test_setup_deposit(usdc, whale,gov,strategist, Vault, LenderYieldOptimiser, 
     assert crUsdc.underlying() == vault.token()
 
     compoundPlugin = strategist.deploy(GenericCompound, strategy, "Compound", cUsdc)
-    creamPlugin = strategist.deploy(GenericCompound, strategy, "Cream", crUsdc)
+    creamPlugin = strategist.deploy(GenericCream, strategy, "Cream", crUsdc)
     dydxPlugin = strategist.deploy(GenericDyDx, strategy, "DyDx")
 
     strategy.addLender(compoundPlugin, {"from": strategist})
