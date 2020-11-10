@@ -138,6 +138,82 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
 
         return weightedAPR.div(bal);
     }
+    function _estimateDebtLimitIncrease(uint256 change) internal view returns (uint256){
+        uint256 highestAPR = 0;
+        uint256 aprChoice = 0;
+        uint256 assets = 0;
+
+        for(uint i = 0; i < lenders.length; i++){
+            uint256 apr = lenders[i].aprAfterDeposit(change);
+            if(apr > highestAPR){
+                aprChoice = i;
+                highestAPR = apr;
+                assets = lenders[i].nav();
+            }
+        }
+
+
+        uint256 weightedAPR =highestAPR.mul(assets.add(change));
+
+        for(uint i = 0; i < lenders.length; i++){
+            if(i != aprChoice){
+                weightedAPR += lenders[i].weightedApr();                   
+            }
+        }
+
+        uint256 bal = estimatedTotalAssets().add(change);
+
+        return weightedAPR.div(bal);
+    }
+
+
+    //TODO: needs improvement. more complicated than limit increase
+    function _estimateDebtLimitDecrease(uint256 change) internal view returns (uint256){
+         uint256 lowestApr = uint256(-1);
+        uint256 aprChoice = 0;
+
+        for(uint i = 0; i < lenders.length; i++){
+            uint256 apr = lenders[i].aprAfterDeposit(change);
+            if(apr < lowestApr){
+                aprChoice = i;
+                lowestApr = apr;
+            }
+        }
+
+
+        uint256 weightedAPR =0;
+
+        for(uint i = 0; i < lenders.length; i++){
+            if(i != aprChoice){
+                weightedAPR += lenders[i].weightedApr();
+            }else{
+                uint256 asset  = lenders[i].nav();
+                if(asset < change){
+                    //simplistic. not accurate
+                    change = asset;
+                }
+                weightedAPR += lowestApr.mul(change);
+            }
+        }
+        uint256 bal = estimatedTotalAssets().add(change);
+        return weightedAPR.div(bal);
+    }
+
+    function estimatedFutureAPR(uint256 newDebtLimit) public view returns (uint256) {
+
+        uint256 oldDebtLimit = vault.strategies(address(this)).totalDebt;
+        uint256 change;
+        if(oldDebtLimit < newDebtLimit){
+            change = newDebtLimit - oldDebtLimit;
+            return _estimateDebtLimitIncrease(change);
+        }else{
+            change = oldDebtLimit - newDebtLimit;
+            return _estimateDebtLimitDecrease(change);
+        }
+
+       
+       
+    }
 
     //cycle all lenders and collect balances
     function lentTotalAssets() public view returns (uint256) {

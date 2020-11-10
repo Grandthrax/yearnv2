@@ -29,8 +29,10 @@ def strategy_changeable(YearnWethCreamStratV2, YearnDaiCompStratV2):
 
 @pytest.fixture
 def whale(accounts, history, web3):
-    #big binance wallet
-    acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
+    #big binance7 wallet
+    #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
+    #big binance8 wallet
+    acc = accounts.at('0xf977814e90da44bfa03b6295a0616a897441acec', force=True)
 
     #lots of weth account
     #acc = accounts.at('0x767Ecb395def19Ab8d1b2FCc89B3DDfBeD28fD6b', force=True)

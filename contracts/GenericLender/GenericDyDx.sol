@@ -203,8 +203,6 @@ contract GenericDyDx is IGenericLender{
         uint256 borrowInterestRate = IInterestSetter(interestSetter).getInterestRate(address(want),borrow, supply).value;
         uint256 lendInterestRate = borrowInterestRate.mul(borrow).div(supply);
         return lendInterestRate.mul(secondPerYear);
-
-
     }
 
     function protectedTokens() internal override view returns (address[] memory) {
