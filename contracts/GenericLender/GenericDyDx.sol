@@ -15,9 +15,9 @@ import "../Interfaces/UniswapInterfaces/IUniswapV2Router02.sol";
 import "./IGenericLender.sol";
 
 /********************
- *   A lender plugin for LenderYieldOptimiser for any erc20 asset on compound (not eth)
+ *   A lender plugin for LenderYieldOptimiser for DyDx
  *   Made by SamPriestley.com
- *   https://github.com/Grandthrax/yearnv2/blob/master/contracts/LenderYieldOptimiser.sol
+ *   https://github.com/Grandthrax/yearnv2/blob/master/contracts/GenericLender/GenericDyDx.sol
  *
  ********************* */
 

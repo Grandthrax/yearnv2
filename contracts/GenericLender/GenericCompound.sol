@@ -16,7 +16,7 @@ import "./IGenericLender.sol";
 /********************
  *   A lender plugin for LenderYieldOptimiser for any erc20 asset on compound (not eth)
  *   Made by SamPriestley.com
- *   https://github.com/Grandthrax/yearnv2/blob/master/contracts/LenderYieldOptimiser.sol
+ *   https://github.com/Grandthrax/yearnv2/blob/master/contracts/GenericDyDx/GenericCompound.sol
  *
  ********************* */
 

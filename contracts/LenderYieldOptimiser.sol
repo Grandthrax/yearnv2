@@ -352,6 +352,43 @@ contract LenderYieldOptimiser is BaseStrategyV0_1_3{
 
     }
 
+    struct lenderRatio{
+        address lender;
+        //share x 1000
+        uint16 share;
+    }
+
+    //share should add up to 1000.
+    function manualAllocation(lenderRatio[] memory _newPositions) public management {
+        uint256 share = 0;
+
+        for(uint i = 0; i < lenders.length; i++){
+            lenders[i].withdrawAll();
+        }
+
+        uint256 assets = want.balanceOf(address(this));
+
+        for(uint i = 0; i < _newPositions.length; i++){
+            bool found = false;
+
+            //might be annoying and expensive to do this second loop but worth it for safety
+            for(uint j = 0; j < lenders.length; j++){
+                if(address(lenders[j]) ==_newPositions[j].lender ){
+                    found = true;
+                }
+            }
+            require(found, "NOT LENDER");
+
+            share+= _newPositions[i].share;
+            uint256 toSend = assets.mul(_newPositions[i].share).div(1000);
+            want.safeTransfer(_newPositions[i].lender, toSend);
+            IGenericLender(_newPositions[i].lender).deposit();
+        }
+
+        require(share == 1000, "SHARE!=1000");
+
+    }
+
 
     //cycle through withdrawing from worst rate first
     function _withdrawSome(uint256 _amount) internal returns(uint256 amountWithdrawn) {
