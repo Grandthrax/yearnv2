@@ -16,7 +16,7 @@
         "lint:write": "prettier --write **/*.sol **/*.json"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "^3.2.0",
+        "@openzeppelin/contracts": "^4.7.2",
         "solium": "^1.2.5",
         "truffle-flattener": "^1.5.0"
     }
